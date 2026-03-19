@@ -141,7 +141,6 @@ Run:
 ```bash
 cd ~/projects-wsl/nexus
 go get github.com/spf13/cobra
-go get github.com/spf13/viper
 ```
 
 - [ ] **Step 5: Verify it builds and runs**
@@ -586,7 +585,7 @@ git commit -m "feat: add config loading with YAML, defaults, and path expansion"
 
 ```sql
 -- internal/db/schema.sql
-PRAGMA journal_mode=WAL;
+-- Note: PRAGMA journal_mode=WAL is set in db.go Open(), not here.
 
 CREATE TABLE IF NOT EXISTS projects (
     id              INTEGER PRIMARY KEY,
@@ -861,22 +860,7 @@ import (
 	"time"
 )
 
-type Project struct {
-	ID            int64
-	Name          string
-	Path          string
-	Languages     string
-	Branch        string
-	Dirty         bool
-	DirtyFiles    int
-	LastCommitAt  *time.Time
-	LastCommitMsg string
-	Ahead         int
-	Behind        int
-	Status        string
-	DiscoveredAt  time.Time
-	LastScannedAt *time.Time
-}
+// Note: Project struct is defined in projects.go, not here.
 
 func testDB(t *testing.T) *DB {
 	t.Helper()
@@ -1149,11 +1133,7 @@ func (d *DB) ListDirtyProjects() ([]Project, error) {
 }
 ```
 
-- [ ] **Step 4: Remove duplicate Project struct from test file**
-
-The test file defined its own `Project` struct — remove it since `projects.go` defines the real one.
-
-- [ ] **Step 5: Run tests**
+- [ ] **Step 4: Run tests**
 
 Run: `cd ~/projects-wsl/nexus && go test ./internal/db/ -v`
 Expected: PASS
@@ -1633,13 +1613,14 @@ git commit -m "feat: notes CRUD with FTS5 search"
 ### Task 8: Scanner — Git Operations
 
 **Files:**
+- Create: `internal/scanner/testhelper.go`
 - Create: `internal/scanner/git.go`
 - Create: `internal/scanner/git_test.go`
 
-- [ ] **Step 1: Write failing tests**
+- [ ] **Step 1: Create test helper first**
 
 ```go
-// internal/scanner/git_test.go
+// internal/scanner/testhelper.go
 package scanner
 
 import (
@@ -1647,13 +1628,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
-	"time"
 )
 
-// createTestRepo creates a git repo with one commit and returns its path.
-func createTestRepo(t *testing.T, name string) string {
+// CreateTestRepo creates a git repo at the given absolute path for testing.
+// Exported for use by other packages (e.g., capture tests).
+func CreateTestRepo(t *testing.T, dir string) string {
 	t.Helper()
-	dir := filepath.Join(t.TempDir(), name)
 	os.MkdirAll(dir, 0755)
 
 	run := func(args ...string) {
@@ -1677,9 +1657,23 @@ func createTestRepo(t *testing.T, name string) string {
 
 	return dir
 }
+```
+
+- [ ] **Step 2: Write failing tests**
+
+```go
+// internal/scanner/git_test.go
+package scanner
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+)
 
 func TestGetBranch(t *testing.T) {
-	repo := createTestRepo(t, "test-repo")
+	repo := CreateTestRepo(t, filepath.Join(t.TempDir(), "test-repo"))
 	branch, err := GetBranch(repo)
 	if err != nil {
 		t.Fatalf("GetBranch: %v", err)
@@ -1690,7 +1684,7 @@ func TestGetBranch(t *testing.T) {
 }
 
 func TestGetDirtyFiles(t *testing.T) {
-	repo := createTestRepo(t, "test-repo")
+	repo := CreateTestRepo(t, filepath.Join(t.TempDir(), "test-repo"))
 
 	// Clean initially
 	count, err := GetDirtyFileCount(repo)
@@ -1710,7 +1704,7 @@ func TestGetDirtyFiles(t *testing.T) {
 }
 
 func TestGetLastCommit(t *testing.T) {
-	repo := createTestRepo(t, "test-repo")
+	repo := CreateTestRepo(t, filepath.Join(t.TempDir(), "test-repo"))
 
 	msg, ts, err := GetLastCommit(repo)
 	if err != nil {
@@ -1725,7 +1719,7 @@ func TestGetLastCommit(t *testing.T) {
 }
 
 func TestDetectLanguages(t *testing.T) {
-	repo := createTestRepo(t, "test-repo")
+	repo := CreateTestRepo(t, filepath.Join(t.TempDir(), "test-repo"))
 	os.WriteFile(filepath.Join(repo, "main.go"), []byte("package main"), 0644)
 	os.WriteFile(filepath.Join(repo, "app.ts"), []byte("console.log()"), 0644)
 
@@ -1852,18 +1846,26 @@ type CommitInfo struct {
 }
 
 func GetChangedFiles(dir string, since time.Time) ([]string, error) {
-	out, err := gitCmd(dir, "diff", "--name-only", "--since="+since.Format(time.RFC3339), "HEAD")
+	// Use git log to find files changed since the given time
+	out, err := gitCmd(dir, "log", "--since="+since.Format(time.RFC3339),
+		"--name-only", "--pretty=format:", "--no-merges")
 	if err != nil {
-		// Fallback: get status
-		out, err = gitCmd(dir, "diff", "--name-only", "HEAD")
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 	if out == "" {
 		return nil, nil
 	}
-	return strings.Split(out, "\n"), nil
+	// Deduplicate file names
+	seen := map[string]bool{}
+	var files []string
+	for _, f := range strings.Split(out, "\n") {
+		f = strings.TrimSpace(f)
+		if f != "" && !seen[f] {
+			seen[f] = true
+			files = append(files, f)
+		}
+	}
+	return files, nil
 }
 
 func GetStaleBranches(dir string, olderThan time.Duration) ([]string, error) {
@@ -1944,7 +1946,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add internal/scanner/git.go internal/scanner/git_test.go
+git add internal/scanner/testhelper.go internal/scanner/git.go internal/scanner/git_test.go
 git commit -m "feat: git operations - branch, status, commits, languages, stale branches"
 ```
 
@@ -2037,7 +2039,7 @@ import (
 	"strings"
 )
 
-// Discover walks the given roots and returns absolute paths to directories
+// Discover walks the given roots and returns absolute paths to directories and returns absolute paths to directories
 // containing a .git folder, skipping paths matching exclusion patterns.
 func Discover(roots []string, exclude []string) ([]string, error) {
 	var projects []string
@@ -2088,14 +2090,19 @@ func Discover(roots []string, exclude []string) ([]string, error) {
 }
 
 func matchPathPattern(path, pattern string) bool {
-	// Handle patterns like "*/node_modules/*"
-	parts := strings.Split(pattern, "/")
-	for _, part := range parts {
-		if part == "*" {
+	// Handle patterns like "*/node_modules/*" by checking each path component
+	patternParts := strings.Split(pattern, "/")
+	pathParts := strings.Split(path, "/")
+
+	for _, pp := range patternParts {
+		if pp == "*" {
 			continue
 		}
-		if strings.Contains(path, "/"+part+"/") || strings.HasSuffix(path, "/"+part) {
-			return true
+		for _, pathPart := range pathParts {
+			matched, _ := filepath.Match(pp, pathPart)
+			if matched {
+				return true
+			}
 		}
 	}
 	return false
@@ -2552,50 +2559,9 @@ func TestCaptureSession(t *testing.T) {
 Run: `cd ~/projects-wsl/nexus && go test ./internal/capture/ -v -run TestCaptureSession`
 Expected: FAIL
 
-- [ ] **Step 3: Export createTestRepo from scanner package**
+- [ ] **Step 3: Implement capture.go**
 
-Add to `internal/scanner/git_test.go` or create `internal/scanner/testhelper.go`:
-
-```go
-// internal/scanner/testhelper.go
-package scanner
-
-import (
-	"os"
-	"os/exec"
-	"path/filepath"
-	"testing"
-)
-
-// CreateTestRepo creates a git repo for testing. Exported for use by other packages.
-func CreateTestRepo(t *testing.T, dir string) string {
-	t.Helper()
-	os.MkdirAll(dir, 0755)
-
-	run := func(args ...string) {
-		cmd := exec.Command("git", args...)
-		cmd.Dir = dir
-		cmd.Env = append(os.Environ(),
-			"GIT_AUTHOR_NAME=test",
-			"GIT_AUTHOR_EMAIL=test@test.com",
-			"GIT_COMMITTER_NAME=test",
-			"GIT_COMMITTER_EMAIL=test@test.com",
-		)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %s: %v", args, out, err)
-		}
-	}
-
-	run("init", "-b", "main")
-	os.WriteFile(filepath.Join(dir, "README.md"), []byte("# test"), 0644)
-	run("add", ".")
-	run("commit", "-m", "initial commit")
-
-	return dir
-}
-```
-
-- [ ] **Step 4: Implement capture.go**
+Note: `scanner.CreateTestRepo` was already created in Task 8.
 
 ```go
 // internal/capture/capture.go
@@ -2714,7 +2680,7 @@ Expected: PASS
 - [ ] **Step 6: Commit**
 
 ```bash
-git add internal/capture/capture.go internal/capture/capture_test.go internal/scanner/testhelper.go
+git add internal/capture/capture.go internal/capture/capture_test.go
 git commit -m "feat: session capture orchestrator with Claude session detection and git data"
 ```
 
@@ -2832,6 +2798,11 @@ import (
 
 func FormatSmartSummary(w io.Writer, dirty []db.Project, sessions []db.Session, stale []db.Project, currentProject string) {
 	fmt.Fprintf(w, "\n┌ NEXUS ─────────────────────────────────────\n│\n")
+
+	// Show current project context if inside one
+	if currentProject != "" {
+		fmt.Fprintf(w, "│  📍 Current project: %s\n│\n", currentProject)
+	}
 
 	// Dirty projects
 	if len(dirty) > 0 {
@@ -3127,8 +3098,10 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"time"
 
+	"github.com/digitalghost404/nexus/internal/capture"
 	"github.com/digitalghost404/nexus/internal/config"
 	"github.com/digitalghost404/nexus/internal/db"
 	"github.com/digitalghost404/nexus/internal/scanner"
@@ -3168,14 +3141,7 @@ func runScan(cfg config.Config, verbose bool) error {
 
 	now := time.Now()
 	for _, path := range paths {
-		name := path[len(path)-len(path)+len(path)-len(path):]
-		// Get just the directory name
-		for i := len(path) - 1; i >= 0; i-- {
-			if path[i] == '/' {
-				name = path[i+1:]
-				break
-			}
-		}
+		name := filepath.Base(path)
 
 		branch, _ := scanner.GetBranch(path)
 		dirtyCount, _ := scanner.GetDirtyFileCount(path)
@@ -3223,7 +3189,51 @@ func runScan(cfg config.Config, verbose bool) error {
 		}
 	}
 
-	fmt.Printf("Scanned %d projects\n", len(paths))
+	// Safety net: create inferred sessions from unrecorded git activity
+	inferredCount := 0
+	allProjects, _ := database.ListProjects("")
+	for _, proj := range allProjects {
+		if !scanner.IsGitRepo(proj.Path) {
+			continue
+		}
+		// Look at commits in the last 24 hours
+		since := now.Add(-24 * time.Hour)
+		commits, _ := scanner.GetCommitsSince(proj.Path, since)
+		if len(commits) == 0 {
+			continue
+		}
+
+		// Check if any existing session covers this time range
+		hasOverlap, _ := database.HasOverlappingSession(proj.ID, since, now)
+		if hasOverlap {
+			continue
+		}
+
+		// Create an inferred session
+		files, _ := scanner.GetChangedFiles(proj.Path, since)
+		summary := capture.GenerateSummary(commits, files)
+		languages := scanner.DetectLanguages(proj.Path)
+		tags := capture.GenerateTags(proj.Name, languages)
+
+		database.InsertSession(db.Session{
+			ProjectID:    proj.ID,
+			StartedAt:    &since,
+			EndedAt:      &now,
+			DurationSecs: int(now.Sub(since).Seconds()),
+			Summary:      summary,
+			FilesChanged: capture.FilesToJSON(files),
+			CommitsMade:  capture.CommitsToJSON(commits),
+			Tags:         capture.TagsToJSON(tags),
+			Source:       "scan",
+		})
+		inferredCount++
+	}
+
+	fmt.Printf("Scanned %d projects", len(paths))
+	if inferredCount > 0 {
+		fmt.Printf(", inferred %d sessions", inferredCount)
+	}
+	fmt.Println()
 	return nil
 }
 
@@ -3334,7 +3344,7 @@ import (
 var (
 	projectsActive bool
 	projectsDirty  bool
-	projectsStale  bool
+	projectsStale  bool // includes both idle and stale
 )
 
 var projectsCmd = &cobra.Command{
@@ -3355,7 +3365,10 @@ var projectsCmd = &cobra.Command{
 		case projectsActive:
 			projects, err = database.ListProjects("active")
 		case projectsStale:
-			projects, err = database.ListProjects("stale")
+			idle, _ := database.ListProjects("idle")
+			staleOnly, _ := database.ListProjects("stale")
+			projects = append(idle, staleOnly...)
+			err = nil
 		default:
 			projects, err = database.ListProjects("")
 		}
@@ -3807,10 +3820,14 @@ import (
 	"github.com/digitalghost404/nexus/internal/config"
 	"github.com/digitalghost404/nexus/internal/db"
 	"github.com/digitalghost404/nexus/internal/display"
+	"github.com/digitalghost404/nexus/internal/logger"
 	"github.com/spf13/cobra"
 )
 
-var debug bool
+var (
+	debug bool
+	log   *logger.Logger
+)
 
 // subcommands that take precedence over project name routing
 var subcommands = map[string]bool{
@@ -3872,10 +3889,20 @@ func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
+	if log != nil {
+		log.Close()
+	}
 }
 
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug output to stderr")
+
+	cobra.OnInitialize(func() {
+		log = logger.New(logger.Config{
+			Debug:   debug,
+			LogFile: config.LogPath(),
+		})
+	})
 }
 ```
 
