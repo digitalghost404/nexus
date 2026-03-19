@@ -5,6 +5,17 @@ import (
 	"testing"
 )
 
+func testDB(t *testing.T) *DB {
+	t.Helper()
+	dir := t.TempDir()
+	d, err := Open(filepath.Join(dir, "test.db"))
+	if err != nil {
+		t.Fatalf("open test db: %v", err)
+	}
+	t.Cleanup(func() { d.Close() })
+	return d
+}
+
 func TestOpenCreatesDatabase(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "test.db")
