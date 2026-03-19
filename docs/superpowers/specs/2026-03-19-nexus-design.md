@@ -42,8 +42,10 @@ Claude Code does not expose a documented post-session hook API. The shell wrappe
 
 ```bash
 # Added to ~/.bashrc by `nexus init`
-claude() { command claude "$@"; nexus capture --dir "$PWD"; }
+claude() { command claude "$@"; local rc=$?; nexus capture --dir "$PWD"; return $rc; }
 ```
+
+This preserves Claude's exit code so `claude && do_something` works correctly.
 
 This fires after every Claude session exit, regardless of how the session ended. It's simple, debuggable, and doesn't depend on Claude's internal architecture.
 
@@ -121,7 +123,13 @@ Tags are derived, not manually maintained:
 
 ### Safety net
 
-When `nexus scan` runs, it checks git log for commits that don't correspond to any recorded session. Creates "inferred" session records (`source: "scan"`) from gaps. Less rich than hook-captured sessions but ensures no activity is lost.
+When `nexus scan` runs, it checks git log for commits that don't correspond to any recorded session. Creates "inferred" session records (`source: "scan"`) from gaps. Less rich than wrapper-captured sessions but ensures no activity is lost.
+
+### Session deduplication
+
+- Wrapper-captured sessions use `claude_session_id` as a natural dedup key — if a session with that ID already exists, skip it.
+- Scan-inferred sessions check for time overlap: if an existing session for the same project covers the same time range, the scan skips it.
+- Rule: wrapper-captured sessions always win over scan-inferred ones (richer data).
 
 ## Project Scanner
 
@@ -212,9 +220,9 @@ nexus sessions wraith             # shorthand for --project
 ### `nexus search`
 
 ```
-nexus search "DNS retry"          # full-text across sessions and notes
+nexus search "DNS retry"          # full-text across sessions and notes (FTS5)
 nexus search --project wraith     # scoped to project
-nexus search --files "*.go"       # sessions that touched Go files
+nexus search --files "*.go"       # sessions that touched Go files (JSON query on files_changed)
 ```
 
 ### `nexus show <project>` / `nexus <project>`
@@ -293,6 +301,7 @@ files_changed       TEXT DEFAULT '[]'   -- JSON array
 commits_made        TEXT DEFAULT '[]'   -- JSON array of {hash, message}
 tags                TEXT DEFAULT '[]'   -- JSON array
 source              TEXT NOT NULL       -- "wrapper", "scan", "manual"
+created_at          DATETIME NOT NULL DEFAULT (datetime('now'))
 ```
 
 **`notes`**
@@ -328,12 +337,21 @@ END;
 **`notes_fts` (FTS5 virtual table)**
 ```sql
 CREATE VIRTUAL TABLE notes_fts USING fts5(
-    content_col,
+    content,
     content=notes,
     content_rowid=id
 );
 
--- Same trigger pattern as sessions_fts
+CREATE TRIGGER notes_ai AFTER INSERT ON notes BEGIN
+    INSERT INTO notes_fts(rowid, content) VALUES (new.id, new.content);
+END;
+CREATE TRIGGER notes_ad AFTER DELETE ON notes BEGIN
+    INSERT INTO notes_fts(notes_fts, rowid, content) VALUES ('delete', old.id, old.content);
+END;
+CREATE TRIGGER notes_au AFTER UPDATE ON notes BEGIN
+    INSERT INTO notes_fts(notes_fts, rowid, content) VALUES ('delete', old.id, old.content);
+    INSERT INTO notes_fts(rowid, content) VALUES (new.id, new.content);
+END;
 ```
 
 **Note on stale branches:** Stale branches are computed on-the-fly during `nexus show` and `nexus scan` from git data rather than stored in a dedicated table. This avoids schema/sync complexity for data that is cheap to recompute.
