@@ -27,14 +27,27 @@ It combines a project health scanner with automatic Claude session logging, back
 
 ## Architecture
 
-### Approach: Hooks + Periodic Scanner
+### Approach: Shell Wrapper + Periodic Scanner
 
 Two capture mechanisms:
 
-1. **Claude Code post-session hook** — triggers `nexus capture` when a Claude session ends. Captures session data in real time.
-2. **Periodic scanner** (`nexus scan`) — crawls configured root directories, updates project health data. Run manually or via cron. Acts as a safety net for missed hooks.
+1. **Shell wrapper** — a bash function wrapping the `claude` command that runs `nexus capture` after Claude exits. Captures session data in real time. This is NOT a native Claude Code hook — it's a shell-level integration.
+2. **Periodic scanner** (`nexus scan`) — crawls configured root directories, updates project health data. Run manually or via cron. Acts as a safety net for missed captures.
 
-No persistent daemon. Hook fires on events, scanner runs on schedule.
+No persistent daemon. Wrapper fires on session exit, scanner runs on schedule.
+
+#### Why a shell wrapper (not a Claude Code hook)
+
+Claude Code does not expose a documented post-session hook API. The shell wrapper approach is the most reliable alternative:
+
+```bash
+# Added to ~/.bashrc by `nexus init`
+claude() { command claude "$@"; nexus capture --dir "$PWD"; }
+```
+
+This fires after every Claude session exit, regardless of how the session ended. It's simple, debuggable, and doesn't depend on Claude's internal architecture.
+
+**Limitation:** Sessions started from IDEs or other non-shell contexts won't be captured by the wrapper. The periodic scanner compensates by detecting git activity that doesn't correspond to any recorded session.
 
 ### Components
 
@@ -47,9 +60,10 @@ No persistent daemon. Hook fires on events, scanner runs on schedule.
 │              Query & Format Layer                │
 ├──────────────────────┬──────────────────────────┤
 │   Session Capture    │    Project Scanner        │
-│   (hook-triggered)   │    (cron/manual)          │
+│   (shell wrapper)    │    (cron/manual)          │
 ├──────────────────────┴──────────────────────────┤
 │              SQLite (~/.nexus/nexus.db)          │
+│              (WAL mode for concurrent access)    │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -57,27 +71,43 @@ No persistent daemon. Hook fires on events, scanner runs on schedule.
 
 ### Trigger
 
-Claude Code post-session hook calls `nexus capture --dir $PWD`.
+Shell wrapper calls `nexus capture --dir $PWD` after `claude` exits.
 
 ### Data captured per session
 
 | Field | Source |
 |-------|--------|
-| `project_path` | Working directory |
+| `project_path` | Working directory (from `$PWD`) |
 | `project_name` | Directory name |
-| `started_at` | Hook/inferred timestamp |
-| `ended_at` | Hook timestamp |
-| `duration_secs` | Calculated |
+| `started_at` | From `~/.claude/sessions/<id>` `startedAt` field, or most recent JSONL first entry |
+| `ended_at` | Timestamp of last JSONL entry in session transcript |
+| `duration_secs` | Calculated from started_at/ended_at |
 | `files_changed` | Git diff at session end |
 | `commits_made` | Git log during session window |
 | `summary` | Generated (see below) |
 | `tags` | Auto-detected |
-| `source` | "hook", "scan", or "manual" |
+| `source` | "wrapper", "scan", or "manual" |
+| `claude_session_id` | UUID from Claude session metadata (for correlation back to raw transcripts) |
+
+### Claude session data format
+
+Claude stores session data in two locations:
+- `~/.claude/sessions/<id>` — minimal metadata: `{pid, sessionId, cwd, startedAt}`. No end timestamp.
+- `~/.claude/projects/<path-slug>/<session-id>.jsonl` — full conversation transcript as JSONL. Each line is a message object with type, content, timestamp, cwd, git branch.
+
+**Important:** The JSONL files can be large (thousands of lines per session). Parsing them is non-trivial and the format is undocumented/may change. Nexus treats this as an opportunistic data source, not a dependency.
+
+### How `nexus capture` resolves timestamps
+
+1. Look for the most recent session in `~/.claude/sessions/` matching the current `$PWD`
+2. Read `startedAt` from session metadata for `started_at`
+3. Read the last line of the corresponding JSONL transcript for `ended_at`
+4. If Claude session data is unavailable, fall back to: `started_at` = earliest commit in the last reasonable window (e.g., 8 hours), `ended_at` = now
 
 ### Summary generation (layered)
 
 1. **Git-based (always available)** — commits and diffs from the session window. Reliable baseline.
-2. **Claude session data (opportunistic)** — parsed from `~/.claude/` session files if accessible. Richer context (the "why" behind changes). Fragile — format may change.
+2. **Claude session data (opportunistic)** — parsed from JSONL transcript files. Look for tool-use messages (file edits, bash commands) to extract richer context. This is fragile — format may change, files can be large. Fail gracefully.
 3. **Manual annotation (optional)** — `nexus note "message"` for user-supplied context.
 
 Capture merges all available layers. Worst case: list of commits. Best case: rich summary with reasoning.
@@ -116,16 +146,23 @@ When `nexus scan` runs, it checks git log for commits that don't correspond to a
 | `ahead` / `behind` | Commits vs remote |
 | `status` | Calculated health status |
 | `languages` | File extension analysis |
-| `stale_branches` | Branches with no activity 7+ days |
+| `stale_branches` | Computed on-the-fly from git (not stored) |
 
 ### Health status
+
+Two orthogonal dimensions:
+
+**Activity status** (time-based, mutually exclusive):
 
 | Status | Condition |
 |--------|-----------|
 | **Active** | Session or commit in last 3 days |
 | **Idle** | Last activity 3–14 days ago |
 | **Stale** | Last activity 14+ days ago |
-| **Dirty** | Uncommitted changes (any age) |
+
+**Dirty flag** (boolean, independent of activity status):
+
+A project can be Active+Dirty, Stale+Dirty, etc. The `dirty` field is a separate boolean column, not part of the status enum. In CLI output, dirty projects are surfaced prominently regardless of their activity status.
 
 Thresholds configurable in `~/.nexus/config.yaml`.
 
@@ -184,7 +221,7 @@ nexus search --files "*.go"       # sessions that touched Go files
 
 Deep dive on a single project: branch, status, recent commits, recent sessions, stale branches, dirty files.
 
-`nexus wraith` works as shorthand — CLI detects when first arg is a known project name.
+`nexus wraith` works as shorthand — CLI detects when first arg is a known project name. **Subcommand names always take precedence** — if a project is named `config`, `scan`, etc., use `nexus show config` explicitly.
 
 ### `nexus note "message"`
 
@@ -209,79 +246,107 @@ nexus config show
 
 First-time setup:
 - Creates `~/.nexus/` directory and SQLite database
-- Displays Claude Code hook installation instructions (does not auto-modify Claude config)
+- Displays shell wrapper installation instructions (the `claude()` function for `.bashrc`)
+- Does not auto-modify shell config — outputs the exact lines to copy/paste
 - Runs initial scan to discover existing projects
-- Optionally displays cron setup instructions
+- Generates a cron line from `scan_interval` config value and displays it for installation
 
 ## Data Model
 
 ### SQLite Schema
 
-Database at `~/.nexus/nexus.db`. Versioned from day one using `PRAGMA user_version`.
+Database at `~/.nexus/nexus.db`. Uses WAL mode for safe concurrent access (e.g., `nexus capture` and `nexus scan` running simultaneously). Versioned from day one using `PRAGMA user_version`.
+
+```sql
+PRAGMA journal_mode=WAL;
+PRAGMA user_version = 1;
+```
 
 **`projects`**
 ```sql
 id              INTEGER PRIMARY KEY
-name            TEXT
-path            TEXT UNIQUE
-languages       TEXT            -- JSON array
+name            TEXT NOT NULL
+path            TEXT NOT NULL UNIQUE
+languages       TEXT DEFAULT '[]'       -- JSON array
 branch          TEXT
-dirty_files     INTEGER
+dirty           INTEGER DEFAULT 0       -- boolean: has uncommitted changes
+dirty_files     INTEGER DEFAULT 0
 last_commit_at  DATETIME
 last_commit_msg TEXT
-ahead           INTEGER
-behind          INTEGER
-status          TEXT            -- "active", "idle", "stale", "archived"
-discovered_at   DATETIME
+ahead           INTEGER DEFAULT 0
+behind          INTEGER DEFAULT 0
+status          TEXT NOT NULL DEFAULT 'active'  -- "active", "idle", "stale", "archived"
+discovered_at   DATETIME NOT NULL
 last_scanned_at DATETIME
 ```
 
 **`sessions`**
 ```sql
-id              INTEGER PRIMARY KEY
-project_id      INTEGER REFERENCES projects(id)
-started_at      DATETIME
-ended_at        DATETIME
-duration_secs   INTEGER
-summary         TEXT
-files_changed   TEXT            -- JSON array
-commits_made    TEXT            -- JSON array of {hash, message}
-tags            TEXT            -- JSON array
-source          TEXT            -- "hook", "scan", "manual"
+id                  INTEGER PRIMARY KEY
+project_id          INTEGER NOT NULL REFERENCES projects(id)
+claude_session_id   TEXT                -- UUID from Claude metadata, nullable
+started_at          DATETIME
+ended_at            DATETIME
+duration_secs       INTEGER
+summary             TEXT
+files_changed       TEXT DEFAULT '[]'   -- JSON array
+commits_made        TEXT DEFAULT '[]'   -- JSON array of {hash, message}
+tags                TEXT DEFAULT '[]'   -- JSON array
+source              TEXT NOT NULL       -- "wrapper", "scan", "manual"
 ```
 
 **`notes`**
 ```sql
 id              INTEGER PRIMARY KEY
-project_id      INTEGER REFERENCES projects(id)  -- nullable
+project_id      INTEGER REFERENCES projects(id)  -- nullable for global notes
 session_id      INTEGER REFERENCES sessions(id)  -- nullable
-content         TEXT
-created_at      DATETIME
+content         TEXT NOT NULL
+created_at      DATETIME NOT NULL
 ```
 
-**`stale_branches`**
+**`sessions_fts` (FTS5 virtual table)**
 ```sql
-id              INTEGER PRIMARY KEY
-project_id      INTEGER REFERENCES projects(id)
-branch_name     TEXT
-last_commit_at  DATETIME
-last_scanned_at DATETIME
+CREATE VIRTUAL TABLE sessions_fts USING fts5(
+    summary,
+    content=sessions,
+    content_rowid=id
+);
+
+-- Triggers to keep FTS in sync
+CREATE TRIGGER sessions_ai AFTER INSERT ON sessions BEGIN
+    INSERT INTO sessions_fts(rowid, summary) VALUES (new.id, new.summary);
+END;
+CREATE TRIGGER sessions_ad AFTER DELETE ON sessions BEGIN
+    INSERT INTO sessions_fts(sessions_fts, rowid, summary) VALUES ('delete', old.id, old.summary);
+END;
+CREATE TRIGGER sessions_au AFTER UPDATE ON sessions BEGIN
+    INSERT INTO sessions_fts(sessions_fts, rowid, summary) VALUES ('delete', old.id, old.summary);
+    INSERT INTO sessions_fts(rowid, summary) VALUES (new.id, new.summary);
+END;
 ```
+
+**`notes_fts` (FTS5 virtual table)**
+```sql
+CREATE VIRTUAL TABLE notes_fts USING fts5(
+    content_col,
+    content=notes,
+    content_rowid=id
+);
+
+-- Same trigger pattern as sessions_fts
+```
+
+**Note on stale branches:** Stale branches are computed on-the-fly during `nexus show` and `nexus scan` from git data rather than stored in a dedicated table. This avoids schema/sync complexity for data that is cheap to recompute.
 
 ### Indexes
 
 - `sessions(project_id, started_at)` — project-scoped session queries
 - `sessions(started_at)` — time-range queries
 - `projects(status)` — filtered project lists
-- FTS5 index on `sessions.summary` and `notes.content` — powers `nexus search`
 
 ### Schema versioning
 
-```sql
-PRAGMA user_version = 1;
-```
-
-Each release checks version and runs migrations if needed.
+Each release checks `PRAGMA user_version` and runs migrations if needed. Migrations are embedded in the binary as sequential SQL files.
 
 ## Configuration
 
@@ -320,8 +385,16 @@ scan_interval: 30m
 
 - YAML over JSON — easier to hand-edit, supports comments
 - Sensible defaults baked into binary — config file optional
-- Explicit roots only (no `~` scanning) — hooks capture sessions from any directory regardless
+- Explicit roots only (no `~` scanning) — wrapper captures sessions from any directory regardless
+- `scan_interval` is used by `nexus init` to generate the cron line
 - Obsidian config stubbed but commented — ready when needed
+
+## Logging & Debugging
+
+- `nexus --debug` flag on any command writes verbose output to stderr
+- `~/.nexus/nexus.log` captures errors from wrapper-triggered captures (which run unattended)
+- Log rotation: keep last 1MB, no external dependency
+- Errors in capture/scan never crash — log and continue
 
 ## Auto-Discovery
 
