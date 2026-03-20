@@ -12,7 +12,7 @@ import (
 
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Initialize Nexus",
+	Short: "Initialize Nexus (~/.nexus/ setup, first scan)",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		nexusDir := config.NexusDir()
 

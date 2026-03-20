@@ -21,7 +21,7 @@ var (
 
 var sessionsCmd = &cobra.Command{
 	Use:   "sessions [project]",
-	Short: "List Claude session history",
+	Short: "List Claude session history with filtering",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := db.Open(config.DBPath())
 		if err != nil {

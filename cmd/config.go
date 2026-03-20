@@ -11,7 +11,7 @@ import (
 
 var configCmd = &cobra.Command{
 	Use:   "config",
-	Short: "Manage Nexus configuration",
+	Short: "Manage Nexus configuration (roots, exclusions)",
 }
 
 var configShowCmd = &cobra.Command{

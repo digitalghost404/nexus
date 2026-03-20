@@ -15,7 +15,7 @@ import (
 
 var showCmd = &cobra.Command{
 	Use:   "show <project>",
-	Short: "Show detailed project info",
+	Short: "Show detailed info for a specific project",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := db.Open(config.DBPath())

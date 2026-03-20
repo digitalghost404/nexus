@@ -19,7 +19,7 @@ var (
 
 var searchCmd = &cobra.Command{
 	Use:   "search <query>",
-	Short: "Search sessions and notes",
+	Short: "Search sessions and notes by keyword",
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := db.Open(config.DBPath())

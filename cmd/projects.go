@@ -18,7 +18,7 @@ var (
 
 var projectsCmd = &cobra.Command{
 	Use:   "projects",
-	Short: "List all tracked projects",
+	Short: "List all tracked projects with health status",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := db.Open(config.DBPath())
 		if err != nil {
