@@ -11,12 +11,12 @@ func TestDiscoverProjects(t *testing.T) {
 	root := t.TempDir()
 
 	// Create 3 git repos
-	createTestRepo(t, filepath.Join(root, "project-a"))
-	createTestRepo(t, filepath.Join(root, "project-b"))
+	CreateTestRepo(t, filepath.Join(root, "project-a"))
+	CreateTestRepo(t, filepath.Join(root, "project-b"))
 	os.MkdirAll(filepath.Join(root, "not-a-repo"), 0755) // no .git
 
 	// Nested repo
-	createTestRepo(t, filepath.Join(root, "nested", "project-c"))
+	CreateTestRepo(t, filepath.Join(root, "nested", "project-c"))
 
 	projects, err := Discover([]string{root}, nil)
 	if err != nil {
@@ -30,8 +30,8 @@ func TestDiscoverProjects(t *testing.T) {
 func TestDiscoverRespectsExclusions(t *testing.T) {
 	root := t.TempDir()
 
-	createTestRepo(t, filepath.Join(root, "project-a"))
-	createTestRepo(t, filepath.Join(root, "scratch-temp"))
+	CreateTestRepo(t, filepath.Join(root, "project-a"))
+	CreateTestRepo(t, filepath.Join(root, "scratch-temp"))
 
 	projects, err := Discover([]string{root}, []string{"*/scratch-*"})
 	if err != nil {
@@ -44,7 +44,7 @@ func TestDiscoverRespectsExclusions(t *testing.T) {
 
 func TestDiscoverSkipsNestedGit(t *testing.T) {
 	root := t.TempDir()
-	repo := createTestRepo(t, filepath.Join(root, "project"))
+	repo := CreateTestRepo(t, filepath.Join(root, "project"))
 
 	// Create node_modules with its own .git (shouldn't be discovered)
 	os.MkdirAll(filepath.Join(repo, "node_modules", "some-pkg", ".git"), 0755)

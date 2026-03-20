@@ -119,8 +119,11 @@ func runScan(cfg config.Config, verbose bool) error {
 		if !scanner.IsGitRepo(proj.Path) {
 			continue
 		}
-		// Look at commits in the last 24 hours
+		// Look at commits since last session, or last 24 hours as fallback
 		since := now.Add(-24 * time.Hour)
+		if lastSession, _ := database.GetLatestSession(proj.ID); lastSession != nil && lastSession.EndedAt != nil {
+			since = *lastSession.EndedAt
+		}
 		commits, _ := scanner.GetCommitsSince(proj.Path, since)
 		if len(commits) == 0 {
 			continue

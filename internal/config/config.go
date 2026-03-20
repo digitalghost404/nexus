@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -69,6 +70,7 @@ func Load(path string) (Config, error) {
 		for e := range merged {
 			cfg.Exclude = append(cfg.Exclude, e)
 		}
+		sort.Strings(cfg.Exclude)
 	} else {
 		cfg.Exclude = defaults.Exclude
 	}

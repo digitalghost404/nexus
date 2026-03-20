@@ -82,6 +82,7 @@ func (l *Logger) writeToFile(line string) {
 
 func (l *Logger) rotate() {
 	l.file.Close()
+	l.file = nil
 	os.Truncate(l.cfg.LogFile, 0)
 	f, err := os.OpenFile(l.cfg.LogFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err == nil {

@@ -55,7 +55,10 @@ var hookInstallCmd = &cobra.Command{
 		if strings.Contains(string(cronOut), "nexus scan") {
 			fmt.Println("✓ Cron job already installed")
 		} else {
-			nexusPath := home + "/go/bin/nexus"
+			nexusPath, exeErr := os.Executable()
+		if exeErr != nil {
+			nexusPath = home + "/go/bin/nexus"
+		}
 			nexusDir := home + "/.nexus"
 			cronLine := fmt.Sprintf("*/30 * * * * %s scan >> %s/nexus.log 2>&1", nexusPath, nexusDir)
 

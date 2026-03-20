@@ -301,8 +301,8 @@ func FormatResume(w io.Writer, s *db.Session, dirtyFiles []string) {
 	fmt.Fprintf(w, "│\n└────────────────────────────────────────────\n\n")
 }
 
-func FormatDiff(w io.Writer, projectName string, sinceDays int, sessions []db.Session) {
-	fmt.Fprintf(w, "\n┌ DIFF: %s (last %d days) ────────────────\n│\n", projectName, sinceDays)
+func FormatDiff(w io.Writer, projectName string, since string, sessions []db.Session) {
+	fmt.Fprintf(w, "\n┌ DIFF: %s (last %s) ────────────────\n│\n", projectName, since)
 
 	// Aggregate stats
 	totalCommits := 0
@@ -481,7 +481,7 @@ func FormatDeps(w io.Writer, results []ProjectDeps, cleanCount int) {
 	fmt.Fprintf(w, "└────────────────────────────────────────────\n\n")
 }
 
-func FormatStale(w io.Writer, projects []db.Project, branches map[string][]StaleBranchInfo, dirtyDetails map[string][]string) {
+func FormatStale(w io.Writer, branches map[string][]StaleBranchInfo, dirtyDetails map[string][]string) {
 	if len(branches) == 0 && len(dirtyDetails) == 0 {
 		fmt.Fprintln(w, "Nothing stale or dirty.")
 		return

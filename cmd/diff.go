@@ -46,15 +46,12 @@ var diffCmd = &cobra.Command{
 			return fmt.Errorf("invalid --since: %w", err)
 		}
 
-		days := 7
-		fmt.Sscanf(diffSince, "%d", &days)
-
 		sessions, err := database.GetSessionsInRange(project.ID, *since, time.Now())
 		if err != nil {
 			return err
 		}
 
-		display.FormatDiff(os.Stdout, project.Name, days, sessions)
+		display.FormatDiff(os.Stdout, project.Name, diffSince, sessions)
 		return nil
 	},
 }

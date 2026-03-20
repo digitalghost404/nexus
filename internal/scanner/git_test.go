@@ -10,31 +10,6 @@ import (
 	"time"
 )
 
-func createTestRepo(t *testing.T, dir string) string {
-	t.Helper()
-	os.MkdirAll(dir, 0755)
-
-	run := func(args ...string) {
-		cmd := exec.Command("git", args...)
-		cmd.Dir = dir
-		cmd.Env = append(os.Environ(),
-			"GIT_AUTHOR_NAME=test",
-			"GIT_AUTHOR_EMAIL=test@test.com",
-			"GIT_COMMITTER_NAME=test",
-			"GIT_COMMITTER_EMAIL=test@test.com",
-		)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %s: %v", args, out, err)
-		}
-	}
-
-	run("init", "-b", "main")
-	os.WriteFile(filepath.Join(dir, "README.md"), []byte("# test"), 0644)
-	run("add", ".")
-	run("commit", "-m", "initial commit")
-
-	return dir
-}
 
 func TestGetBranch(t *testing.T) {
 	repo := CreateTestRepo(t, filepath.Join(t.TempDir(), "test-repo"))

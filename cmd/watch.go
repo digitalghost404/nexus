@@ -2,9 +2,11 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -20,15 +22,17 @@ var watchCmd = &cobra.Command{
 	Short: "Live-updating project dashboard",
 	Long:  "Auto-refreshing terminal display of project status. Updates every 30 seconds.",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+		defer stop()
+
+		database, err := db.Open(config.DBPath())
+		if err != nil {
+			return err
+		}
+		defer database.Close()
+
 		for {
 			clearScreen()
-
-			database, err := db.Open(config.DBPath())
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "db error: %v\n", err)
-				time.Sleep(30 * time.Second)
-				continue
-			}
 
 			dirty, _ := database.ListDirtyProjects()
 			sessions, _ := database.ListSessions(db.SessionFilter{Limit: 5})
@@ -46,8 +50,11 @@ var watchCmd = &cobra.Command{
 			fmt.Println("Refreshing every 30s — Ctrl+C to exit")
 			fmt.Printf("Last refresh: %s\n", time.Now().Format("15:04:05"))
 
-			database.Close()
-			time.Sleep(30 * time.Second)
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-time.After(30 * time.Second):
+			}
 		}
 	},
 }

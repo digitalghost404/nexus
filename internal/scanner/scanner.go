@@ -58,19 +58,34 @@ func Discover(roots []string, exclude []string) ([]string, error) {
 }
 
 func matchPathPattern(path, pattern string) bool {
-	// Handle patterns like "*/node_modules/*" by checking each path component
+	// Handle patterns like "*/node_modules/*" by checking if non-wildcard
+	// pattern parts appear as consecutive path components in order.
 	patternParts := strings.Split(pattern, "/")
 	pathParts := strings.Split(path, "/")
 
+	// Extract non-wildcard pattern parts
+	var concrete []string
 	for _, pp := range patternParts {
-		if pp == "*" {
-			continue
+		if pp != "*" && pp != "" {
+			concrete = append(concrete, pp)
 		}
-		for _, pathPart := range pathParts {
-			matched, _ := filepath.Match(pp, pathPart)
-			if matched {
-				return true
+	}
+	if len(concrete) == 0 {
+		return false
+	}
+
+	// Check if concrete parts appear consecutively in pathParts
+	for i := 0; i <= len(pathParts)-len(concrete); i++ {
+		allMatch := true
+		for j, c := range concrete {
+			matched, _ := filepath.Match(c, pathParts[i+j])
+			if !matched {
+				allMatch = false
+				break
 			}
+		}
+		if allMatch {
+			return true
 		}
 	}
 	return false

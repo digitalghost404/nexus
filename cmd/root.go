@@ -37,13 +37,14 @@ var rootCmd = &cobra.Command{
 			}
 			// Not a subcommand — try as project name
 			database, err := db.Open(config.DBPath())
-			if err == nil {
-				defer database.Close()
-				p, _ := database.GetProjectByName(args[0])
-				if p != nil {
-					showCmd.SetArgs(args)
-					return showCmd.RunE(showCmd, args)
-				}
+			if err != nil {
+				return fmt.Errorf("open db: %w", err)
+			}
+			defer database.Close()
+			p, _ := database.GetProjectByName(args[0])
+			if p != nil {
+				showCmd.SetArgs(args)
+				return showCmd.RunE(showCmd, args)
 			}
 		}
 		return smartSummary()

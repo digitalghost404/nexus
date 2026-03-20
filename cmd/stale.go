@@ -33,10 +33,17 @@ var staleCmd = &cobra.Command{
 		allProjs := append(idle, staleProjs...)
 
 		// Collect stale branches and dirty details
-		branches := map[string][]display.StaleBranchInfo{}
-		dirtyDetails := map[string][]string{}
+		// Use path as key internally to avoid name collisions, display with name
+		type projectInfo struct {
+			name string
+			path string
+		}
+		branchesByPath := map[string][]display.StaleBranchInfo{}
+		dirtyDetailsByPath := map[string][]string{}
+		projectsByPath := map[string]projectInfo{}
 
 		for _, p := range allProjs {
+			projectsByPath[p.Path] = projectInfo{name: p.Name, path: p.Path}
 			if !scanner.IsGitRepo(p.Path) {
 				continue
 			}
@@ -46,7 +53,7 @@ var staleCmd = &cobra.Command{
 				for _, b := range staleBranches {
 					infos = append(infos, display.StaleBranchInfo{Name: b.Name, Age: display.RelativeTime(b.LastCommit)})
 				}
-				branches[p.Name] = infos
+				branchesByPath[p.Path] = infos
 			}
 
 			if p.Dirty {
@@ -55,14 +62,14 @@ var staleCmd = &cobra.Command{
 				for _, d := range details {
 					lines = append(lines, fmt.Sprintf("%s %s", d.Status, d.Path))
 				}
-				dirtyDetails[p.Name] = lines
+				dirtyDetailsByPath[p.Path] = lines
 			}
 		}
 
 		// Also check active+dirty projects
 		dirtyProjs, _ := database.ListDirtyProjects()
 		for _, p := range dirtyProjs {
-			if _, exists := dirtyDetails[p.Name]; exists {
+			if _, exists := dirtyDetailsByPath[p.Path]; exists {
 				continue
 			}
 			details, _ := scanner.GetDirtyFileDetails(p.Path)
@@ -71,31 +78,32 @@ var staleCmd = &cobra.Command{
 				lines = append(lines, fmt.Sprintf("%s %s", d.Status, d.Path))
 			}
 			if len(lines) > 0 {
-				dirtyDetails[p.Name] = lines
+				dirtyDetailsByPath[p.Path] = lines
+				projectsByPath[p.Path] = projectInfo{name: p.Name, path: p.Path}
 			}
 		}
 
+		// Convert to name-keyed maps for display
+		branches := map[string][]display.StaleBranchInfo{}
+		for path, brs := range branchesByPath {
+			branches[projectsByPath[path].name] = brs
+		}
+		dirtyDetails := map[string][]string{}
+		for path, details := range dirtyDetailsByPath {
+			dirtyDetails[projectsByPath[path].name] = details
+		}
+
 		if !staleCleanup {
-			display.FormatStale(os.Stdout, allProjs, branches, dirtyDetails)
+			display.FormatStale(os.Stdout, branches, dirtyDetails)
 			return nil
 		}
 
 		// Interactive cleanup
 		reader := bufio.NewReader(os.Stdin)
-		for project, brs := range branches {
-			// Find the project to get its path
-			var projPath string
-			for _, p := range allProjs {
-				if p.Name == project {
-					projPath = p.Path
-					break
-				}
-			}
-			if projPath == "" {
-				continue
-			}
+		for projPath, brs := range branchesByPath {
+			info := projectsByPath[projPath]
 
-			fmt.Printf("\n%s\n", project)
+			fmt.Printf("\n%s\n", info.name)
 			for _, b := range brs {
 				fmt.Printf("  %s  (last commit: %s)\n", b.Name, b.Age)
 				fmt.Printf("  Delete? [y/n/q] ")
@@ -105,7 +113,7 @@ var staleCmd = &cobra.Command{
 				}
 				switch input[0] {
 				case 'y', 'Y':
-					err := scanner.DeleteBranch(projPath, b.Name)
+					err := scanner.DeleteBranch(info.path, b.Name)
 					if err != nil {
 						fmt.Printf("  ✗ Failed: %v\n", err)
 					} else {

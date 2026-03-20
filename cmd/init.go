@@ -54,8 +54,8 @@ var initCmd = &cobra.Command{
 		cfg, _ := config.Load(cfgPath)
 		fmt.Println("\n── Periodic Scan ─────────────────────────────")
 		fmt.Printf("Add this cron job to run scans every %s:\n\n", cfg.ScanInterval)
-		fmt.Printf("  */%s * * * * %s/go/bin/nexus scan >> %s/nexus.log 2>&1\n",
-			cronMinutes(cfg.ScanInterval), os.Getenv("HOME"), nexusDir)
+		fmt.Printf("  %s %s/go/bin/nexus scan >> %s/nexus.log 2>&1\n",
+			cronExpr(cfg.ScanInterval), os.Getenv("HOME"), nexusDir)
 		fmt.Println()
 
 		// Run initial scan
@@ -64,12 +64,20 @@ var initCmd = &cobra.Command{
 	},
 }
 
-func cronMinutes(interval string) string {
-	// Simple conversion: "30m" -> "30", "15m" -> "15"
-	if len(interval) > 1 && interval[len(interval)-1] == 'm' {
-		return interval[:len(interval)-1]
+func cronExpr(interval string) string {
+	if len(interval) < 2 {
+		return "*/30 * * * *"
 	}
-	return "30" // default
+	unit := interval[len(interval)-1]
+	num := interval[:len(interval)-1]
+	switch unit {
+	case 'm':
+		return fmt.Sprintf("*/%s * * * *", num)
+	case 'h':
+		return fmt.Sprintf("0 */%s * * *", num)
+	default:
+		return "*/30 * * * *"
+	}
 }
 
 func init() {

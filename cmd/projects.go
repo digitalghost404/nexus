@@ -34,10 +34,15 @@ var projectsCmd = &cobra.Command{
 		case projectsActive:
 			projects, err = database.ListProjects("active")
 		case projectsStale:
-			idle, _ := database.ListProjects("idle")
-			staleOnly, _ := database.ListProjects("stale")
+			idle, err := database.ListProjects("idle")
+			if err != nil {
+				return err
+			}
+			staleOnly, err := database.ListProjects("stale")
+			if err != nil {
+				return err
+			}
 			projects = append(idle, staleOnly...)
-			err = nil
 		default:
 			projects, err = database.ListProjects("")
 		}

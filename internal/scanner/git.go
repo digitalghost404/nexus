@@ -83,8 +83,12 @@ func GetCommitsSince(dir string, since time.Time) ([]CommitInfo, error) {
 			continue
 		}
 		ts, _ := time.Parse(time.RFC3339, parts[2])
+		hash := parts[0]
+		if len(hash) > 8 {
+			hash = hash[:8]
+		}
 		commits = append(commits, CommitInfo{
-			Hash:    parts[0][:8],
+			Hash:    hash,
 			Message: parts[1],
 			Time:    ts,
 		})
