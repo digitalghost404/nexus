@@ -152,7 +152,26 @@ func GetDirtyFileDetails(dir string) ([]DirtyFile, error) {
 	return files, nil
 }
 
+// StaleBranch holds the branch name and the time of its last commit.
+type StaleBranch struct {
+	Name       string
+	LastCommit time.Time
+}
+
 func GetStaleBranches(dir string, olderThan time.Duration) ([]string, error) {
+	branches, err := GetStaleBranchesWithDates(dir, olderThan)
+	if err != nil {
+		return nil, err
+	}
+	names := make([]string, len(branches))
+	for i, b := range branches {
+		names[i] = b.Name
+	}
+	return names, nil
+}
+
+// GetStaleBranchesWithDates returns stale branches together with their last commit time.
+func GetStaleBranchesWithDates(dir string, olderThan time.Duration) ([]StaleBranch, error) {
 	out, err := gitCmd(dir, "for-each-ref", "--sort=-committerdate",
 		"--format=%(refname:short)|%(committerdate:iso-strict)", "refs/heads/")
 	if err != nil {
@@ -163,7 +182,7 @@ func GetStaleBranches(dir string, olderThan time.Duration) ([]string, error) {
 	}
 
 	cutoff := time.Now().Add(-olderThan)
-	var stale []string
+	var stale []StaleBranch
 	for _, line := range strings.Split(out, "\n") {
 		parts := strings.SplitN(line, "|", 2)
 		if len(parts) != 2 {
@@ -174,7 +193,7 @@ func GetStaleBranches(dir string, olderThan time.Duration) ([]string, error) {
 			continue
 		}
 		if ts.Before(cutoff) {
-			stale = append(stale, parts[0])
+			stale = append(stale, StaleBranch{Name: parts[0], LastCommit: ts})
 		}
 	}
 	return stale, nil

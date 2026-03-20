@@ -34,8 +34,9 @@ var showCmd = &cobra.Command{
 
 		sessions, _ := database.ListSessions(db.SessionFilter{ProjectID: p.ID, Limit: 5})
 		staleBranches, _ := scanner.GetStaleBranches(p.Path, 7*24*time.Hour)
+		linkedProjects, _ := database.GetLinkedProjects(p.ID)
 
-		display.FormatProjectDetail(os.Stdout, p, sessions, staleBranches)
+		display.FormatProjectDetail(os.Stdout, p, sessions, staleBranches, linkedProjects)
 		return nil
 	},
 }

@@ -199,6 +199,10 @@ func (d *DB) GetSessionsInRange(projectID int64, since, until time.Time) ([]Sess
 }
 
 func (d *DB) GetDistinctSessionDates() ([]string, error) {
+	// Note: SQLite stores timestamps in UTC. The substr(CAST...) approach extracts
+	// the date portion in UTC, which may differ from local date for sessions recorded
+	// near midnight in negative-offset timezones (e.g. 11PM EST appears as next day UTC).
+	// For a personal single-machine tool this is an acceptable limitation.
 	rows, err := d.db.Query(`
 		SELECT DISTINCT substr(CAST(started_at AS TEXT), 1, 10)
 		FROM sessions

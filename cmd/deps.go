@@ -117,7 +117,10 @@ func checkGoDeps(dir string) []display.DepInfo {
 func checkNpmDeps(dir string) []display.DepInfo {
 	cmd := exec.Command("npm", "outdated", "--json")
 	cmd.Dir = dir
-	out, _ := cmd.Output() // npm outdated exits 1 when outdated packages exist
+	out, err := cmd.Output() // npm outdated exits 1 when outdated packages exist
+	if err != nil && len(out) == 0 {
+		return nil
+	}
 
 	var result map[string]struct {
 		Current string `json:"current"`

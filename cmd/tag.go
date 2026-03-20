@@ -18,7 +18,7 @@ var tagCmd = &cobra.Command{
 	Use:   "tag [session-id] <label>",
 	Short: "Tag sessions with labels",
 	Long:  "Adds a user tag to a session. Without a session ID, tags the latest session for the current project.",
-	Args:  cobra.MinimumNArgs(1),
+	Args:  cobra.MinimumNArgs(0),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		database, err := db.Open(config.DBPath())
 		if err != nil {
@@ -28,6 +28,27 @@ var tagCmd = &cobra.Command{
 
 		var sessionID int64
 		var label string
+
+		// --remove with no positional arg: resolve latest session for current project
+		if tagRemove != "" && len(args) == 0 {
+			cwd, _ := os.Getwd()
+			absDir, _ := filepath.Abs(cwd)
+			p, _ := database.GetProjectByPath(absDir)
+			if p == nil {
+				return fmt.Errorf("not inside a tracked project — specify a session ID")
+			}
+			latest, _ := database.GetLatestSession(p.ID)
+			if latest == nil {
+				return fmt.Errorf("no sessions found for %s", p.Name)
+			}
+			database.RemoveSessionTag(latest.ID, tagRemove)
+			fmt.Printf("✓ Removed tag \"%s\" from session #%d\n", tagRemove, latest.ID)
+			return nil
+		}
+
+		if len(args) == 0 {
+			return fmt.Errorf("provide a label, or use --remove <tag> to remove a tag from the latest session")
+		}
 
 		// Parse args: first arg might be a session ID (numeric) or a label
 		if len(args) >= 2 {

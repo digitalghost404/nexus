@@ -161,7 +161,7 @@ func FormatSessionList(w io.Writer, sessions []db.Session) {
 	fmt.Fprintln(w)
 }
 
-func FormatProjectDetail(w io.Writer, p *db.Project, sessions []db.Session, staleBranches []string) {
+func FormatProjectDetail(w io.Writer, p *db.Project, sessions []db.Session, staleBranches []string, linkedProjects []db.Project) {
 	fmt.Fprintf(w, "\n┌ %s ─────────────────────────────────\n│\n", strings.ToUpper(p.Name))
 
 	fmt.Fprintf(w, "│  Path:      %s\n", p.Path)
@@ -178,6 +178,13 @@ func FormatProjectDetail(w io.Writer, p *db.Project, sessions []db.Session, stal
 
 	if p.Ahead > 0 || p.Behind > 0 {
 		fmt.Fprintf(w, "│  Remote:    %d ahead, %d behind\n", p.Ahead, p.Behind)
+	}
+
+	if len(linkedProjects) > 0 {
+		fmt.Fprintf(w, "│\n│  Linked Projects\n")
+		for _, lp := range linkedProjects {
+			fmt.Fprintf(w, "│  %s  %s\n", lp.Name, lp.Path)
+		}
 	}
 
 	if len(sessions) > 0 {

@@ -40,11 +40,11 @@ var staleCmd = &cobra.Command{
 			if !scanner.IsGitRepo(p.Path) {
 				continue
 			}
-			staleBranches, _ := scanner.GetStaleBranches(p.Path, 7*24*time.Hour)
+			staleBranches, _ := scanner.GetStaleBranchesWithDates(p.Path, 7*24*time.Hour)
 			if len(staleBranches) > 0 {
 				var infos []display.StaleBranchInfo
 				for _, b := range staleBranches {
-					infos = append(infos, display.StaleBranchInfo{Name: b, Age: "7+ days"})
+					infos = append(infos, display.StaleBranchInfo{Name: b.Name, Age: display.RelativeTime(b.LastCommit)})
 				}
 				branches[p.Name] = infos
 			}
