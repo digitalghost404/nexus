@@ -16,6 +16,7 @@ var (
 	sessionsProject string
 	sessionsSince   string
 	sessionsToday   bool
+	sessionsTag     string
 )
 
 var sessionsCmd = &cobra.Command{
@@ -27,6 +28,15 @@ var sessionsCmd = &cobra.Command{
 			return err
 		}
 		defer database.Close()
+
+		if sessionsTag != "" {
+			taggedSessions, err := database.ListSessionsByTag(sessionsTag)
+			if err != nil {
+				return err
+			}
+			display.FormatSessionList(os.Stdout, taggedSessions)
+			return nil
+		}
 
 		filter := db.SessionFilter{Limit: 10}
 
@@ -99,5 +109,6 @@ func init() {
 	sessionsCmd.Flags().StringVar(&sessionsProject, "project", "", "Filter by project")
 	sessionsCmd.Flags().StringVar(&sessionsSince, "since", "", "Show sessions since duration (e.g. 7d)")
 	sessionsCmd.Flags().BoolVar(&sessionsToday, "today", false, "Show today's sessions only")
+	sessionsCmd.Flags().StringVar(&sessionsTag, "tag", "", "Filter by user tag")
 	rootCmd.AddCommand(sessionsCmd)
 }
