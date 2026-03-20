@@ -62,7 +62,17 @@ Separate from the existing `tags` JSON column (which holds auto-generated tags).
 
 ### Schema Migration
 
-Bump `PRAGMA user_version` from 1 to 2. The `migrate()` function checks version and runs new CREATE TABLE/INDEX statements only when upgrading from 1. Existing data is untouched.
+Two paths to the same result:
+
+**Fresh install (version 0):** `schema.sql` is updated to include v2 tables alongside v1 tables. Fresh installs run the full schema and set `user_version = 2` directly.
+
+**Existing install (version 1→2):** A separate embedded SQL string (`migration_v2.sql`) contains only the delta — the two CREATE TABLE and two CREATE INDEX statements. The `migrate()` function runs this when `user_version == 1`, then sets `user_version = 2`.
+
+Both paths produce identical schema. Existing data is untouched.
+
+### Subcommand Routing
+
+The `subcommands` map in `cmd/root.go` (used for project-name shorthand routing) must be replaced with dynamic detection. Instead of a hardcoded map, iterate `rootCmd.Commands()` to build the set of registered subcommand names. This prevents collisions when adding new commands and eliminates a maintenance burden.
 
 ### New DB Methods
 
@@ -152,7 +162,7 @@ With `--cleanup`: interactive mode that walks through stale branches:
 3. `y` = delete branch via `git branch -d`, `n` = skip, `q` = quit
 4. For dirty projects: show uncommitted files, warn "review manually" — never auto-discard work
 
-**Branch deletion:** Uses `git branch -d` (safe delete, refuses if unmerged). If user wants force delete, they do it manually.
+**Branch deletion:** Uses `git branch -d` (safe delete, refuses if unmerged). If `-d` fails (unmerged branch), print the git error message and continue to the next branch — never abort the whole cleanup. If user wants force delete, they do it manually.
 
 #### `nexus deps`
 
@@ -178,6 +188,8 @@ Scans all tracked projects for outdated dependencies.
 - `requirements.txt` exists → run `pip list --outdated --format=json` in that directory
 
 **Tool tolerance:** Check `exec.LookPath("go")`, `exec.LookPath("npm")`, `exec.LookPath("pip3")` before each checker. Skip with message if tool not found. Never crash.
+
+**Performance:** Checks run sequentially per project (to avoid hammering the network). Show progress: `Checking wraith...` as each project starts. `go list -m -u` can take 10-30 seconds per Go project. Supports `--project <name>` flag to check a single project instead of all.
 
 #### `nexus report [--week|--month]`
 
@@ -249,15 +261,23 @@ Languages: Go, TypeScript
 
 Output to stdout. No clipboard integration — user pipes to `clip.exe` if needed.
 
+**Note:** The "Linked Projects" section is conditional — only shown if the `project_links` table exists (i.e., after v2 migration). Before migration, this section is simply omitted.
+
 #### `nexus hook install` / `nexus hook uninstall`
 
+**Canonical wrapper content:**
+```bash
+claude() { command claude "$@"; local rc=$?; nexus capture --dir "$PWD"; return $rc; }
+```
+
 **Install:**
-1. Check for any existing `claude()` function in `~/.bashrc` (not just our wrapper)
-2. If found with different content, warn and abort: "Existing claude() function found in .bashrc — not overwriting. Add manually."
-3. If not found, append the wrapper function
-4. Check `crontab -l` for existing `nexus scan` entry
-5. If not found, append to crontab
-6. Safe to run multiple times — never duplicates
+1. Check for any existing `claude()` function in `~/.bashrc` (grep for `^claude()` or `^claude ()`)
+2. If found and matches our canonical wrapper exactly — already installed, skip
+3. If found with different content — warn and abort: "Existing claude() function found in .bashrc — not overwriting. Add manually."
+4. If not found, append the wrapper function
+5. Check `crontab -l` for existing `nexus scan` entry
+6. If not found, append to crontab
+7. Safe to run multiple times — never duplicates
 
 **Uninstall:**
 1. Remove the `claude()` wrapper from `~/.bashrc`
@@ -273,7 +293,7 @@ This week: ██████░  6/7 days
 Last week: ███████  7/7 days
 ```
 
-**Calculation:** `SELECT DISTINCT date(started_at) FROM sessions ORDER BY date(started_at) DESC`. Walk backward from today counting consecutive dates. For longest streak, find the longest run in the full date list.
+**Calculation:** `SELECT DISTINCT date(started_at, 'localtime') FROM sessions ORDER BY 1 DESC`. Walk backward from today counting consecutive dates. For longest streak, find the longest run in the full date list. Uses `'localtime'` modifier to avoid timezone issues where a late-night session appears on the wrong UTC date.
 
 Weekly bars: 7 characters, `█` for days with sessions, `░` for days without. Current week and last week shown.
 
@@ -291,10 +311,13 @@ nexus
 ```
 
 **Logic:**
-1. FTS search on `sessions.summary` for the query
-2. For matching sessions, parse `files_changed` JSON
-3. Group by project, then by file path
-4. Show which sessions touched each file
+1. Search two sources: FTS on `sessions.summary` AND LIKE search on `files_changed` JSON column
+2. Union the matching sessions from both searches (deduplicated)
+3. For all matching sessions, parse `files_changed` JSON
+4. Group by project, then by file path
+5. Show which sessions touched each file
+
+This dual search means `nexus where "retry"` finds sessions that mention "retry" in their summary AND sessions that touched files with "retry" in the path (like `internal/retry.go`).
 
 Answers "where did I implement X?" instead of "when did I work on X?"
 
@@ -327,7 +350,10 @@ nexus sessions --tag "breakthrough"   # filter sessions by tag
 
 **Numeric first arg:** treated as session ID.
 
-**Integration:** `nexus search` results include tags. `nexus sessions --tag` filter added.
+**Integration:**
+- `nexus sessions --tag "label"` filters by user tags in the `session_tags` table (not auto-generated JSON tags)
+- `nexus search` results display user tags alongside each matching session
+- `FormatSearchResults` and `FormatSessionList` in display.go will need modification to show tags
 
 ## Help & Command Grouping
 
