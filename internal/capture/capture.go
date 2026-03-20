@@ -28,23 +28,12 @@ func CaptureSession(database *db.DB, workDir string, claudeDir string) (*Capture
 
 	projectName := filepath.Base(absDir)
 
-	// Ensure project exists in DB
-	now := time.Now()
-	projectID, err := database.UpsertProject(db.Project{
-		Name:         projectName,
-		Path:         absDir,
-		Status:       "active",
-		DiscoveredAt: now,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("upsert project: %w", err)
-	}
-
 	// Try to find Claude session info
 	if claudeDir == "" {
 		claudeDir = DefaultClaudeDir()
 	}
 
+	now := time.Now()
 	var startedAt *time.Time
 	var claudeSessionID string
 
@@ -70,11 +59,32 @@ func CaptureSession(database *db.DB, workDir string, claudeDir string) (*Capture
 	var commits []scanner.CommitInfo
 	var files []string
 	var languages []string
+	var branch string
+	var dirtyCount int
+	var dirty bool
 
 	if scanner.IsGitRepo(absDir) {
+		branch, _ = scanner.GetBranch(absDir)
+		dirtyCount, _ = scanner.GetDirtyFileCount(absDir)
+		dirty = dirtyCount > 0
 		commits, _ = scanner.GetCommitsSince(absDir, *startedAt)
 		files, _ = scanner.GetChangedFiles(absDir, *startedAt)
 		languages = scanner.DetectLanguages(absDir)
+	}
+
+	// Ensure project exists in DB with full git health data
+	projectID, err := database.UpsertProject(db.Project{
+		Name:         projectName,
+		Path:         absDir,
+		Branch:       branch,
+		Dirty:        dirty,
+		DirtyFiles:   dirtyCount,
+		Languages:    TagsToJSON(languages),
+		Status:       "active",
+		DiscoveredAt: now,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("upsert project: %w", err)
 	}
 
 	summary := GenerateSummary(commits, files)

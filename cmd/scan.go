@@ -4,6 +4,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -95,9 +96,20 @@ func runScan(cfg config.Config, verbose bool) error {
 		}
 	}
 
+	// Archive disappeared projects
+	allProjects, _ := database.ListProjects("")
+	for _, p := range allProjects {
+		if _, err := os.Stat(p.Path); os.IsNotExist(err) {
+			database.ArchiveProject(p.ID)
+			if verbose {
+				fmt.Printf("  ⚠ Archived: %s (path no longer exists)\n", p.Name)
+			}
+		}
+	}
+
 	// Safety net: create inferred sessions from unrecorded git activity
 	inferredCount := 0
-	allProjects, _ := database.ListProjects("")
+	allProjects, _ = database.ListProjects("")
 	for _, proj := range allProjects {
 		if !scanner.IsGitRepo(proj.Path) {
 			continue

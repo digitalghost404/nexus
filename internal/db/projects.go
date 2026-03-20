@@ -127,6 +127,11 @@ func (d *DB) ListProjects(status string) ([]Project, error) {
 	return projects, nil
 }
 
+func (d *DB) ArchiveProject(id int64) error {
+	_, err := d.db.Exec("UPDATE projects SET status = 'archived' WHERE id = ?", id)
+	return err
+}
+
 func (d *DB) ListDirtyProjects() ([]Project, error) {
 	rows, err := d.db.Query(`
 		SELECT id, name, path, languages, branch, dirty, dirty_files,

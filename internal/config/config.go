@@ -22,8 +22,15 @@ type Config struct {
 
 func Default() Config {
 	return Config{
-		Roots:   []string{},
-		Exclude: []string{},
+		Roots: []string{},
+		Exclude: []string{
+			"*/node_modules/*",
+			"*/vendor/*",
+			"*/.cache/*",
+			"*/go/pkg/*",
+			"*/snap/*",
+			"*/.nvm/*",
+		},
 		Thresholds: Thresholds{
 			Idle:  3,
 			Stale: 14,
