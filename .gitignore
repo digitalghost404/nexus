@@ -28,5 +28,8 @@ CLAUDE.md
 # Superpowers
 .superpowers/
 
+# Internal docs
+docs/
+
 # Go
 vendor/

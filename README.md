@@ -10,7 +10,7 @@ Nexus answers two questions: **"what's the state of everything?"** and **"what d
 go install github.com/digitalghost404/nexus@latest
 ```
 
-Requires Go 1.22+.
+Requires Go 1.26+.
 
 ## Quick Start
 
