@@ -42,6 +42,7 @@ var captureCmd = &cobra.Command{
 }
 
 func init() {
+	captureCmd.GroupID = "core"
 	captureCmd.Flags().StringVar(&captureDir, "dir", "", "Working directory of the session")
 	rootCmd.AddCommand(captureCmd)
 }

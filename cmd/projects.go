@@ -51,6 +51,7 @@ var projectsCmd = &cobra.Command{
 }
 
 func init() {
+	projectsCmd.GroupID = "query"
 	projectsCmd.Flags().BoolVar(&projectsActive, "active", false, "Show active projects only")
 	projectsCmd.Flags().BoolVar(&projectsDirty, "dirty", false, "Show dirty projects only")
 	projectsCmd.Flags().BoolVar(&projectsStale, "stale", false, "Show stale projects only")

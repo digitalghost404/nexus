@@ -86,6 +86,7 @@ func matchFilePattern(file, pattern string) bool {
 }
 
 func init() {
+	searchCmd.GroupID = "query"
 	searchCmd.Flags().StringVar(&searchProject, "project", "", "Filter by project")
 	searchCmd.Flags().StringVar(&searchFiles, "files", "", "Filter by file pattern")
 	rootCmd.AddCommand(searchCmd)

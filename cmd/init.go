@@ -73,5 +73,6 @@ func cronMinutes(interval string) string {
 }
 
 func init() {
+	initCmd.GroupID = "core"
 	rootCmd.AddCommand(initCmd)
 }

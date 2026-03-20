@@ -95,6 +95,7 @@ func parseDuration(s string) (*time.Time, error) {
 }
 
 func init() {
+	sessionsCmd.GroupID = "query"
 	sessionsCmd.Flags().StringVar(&sessionsProject, "project", "", "Filter by project")
 	sessionsCmd.Flags().StringVar(&sessionsSince, "since", "", "Show sessions since duration (e.g. 7d)")
 	sessionsCmd.Flags().BoolVar(&sessionsToday, "today", false, "Show today's sessions only")

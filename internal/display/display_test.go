@@ -57,6 +57,71 @@ func TestFormatProjectTable(t *testing.T) {
 	}
 }
 
+func TestFormatResume(t *testing.T) {
+	var buf bytes.Buffer
+	now := time.Now()
+	s := db.Session{
+		ProjectName:  "wraith",
+		Summary:      "Added retry logic",
+		StartedAt:    &now,
+		DurationSecs: 2700,
+		CommitsMade:  `[{"hash":"abc123","message":"feat: add retry"}]`,
+		FilesChanged: `["cmd/scan.go","internal/scanner.go"]`,
+	}
+	dirtyFiles := []string{"M internal/test.go", "?? new.txt"}
+
+	FormatResume(&buf, &s, dirtyFiles)
+	output := buf.String()
+
+	if !strings.Contains(output, "RESUME") {
+		t.Error("expected RESUME header")
+	}
+	if !strings.Contains(output, "wraith") {
+		t.Error("expected project name")
+	}
+	if !strings.Contains(output, "retry") {
+		t.Error("expected summary content")
+	}
+}
+
+func TestFormatStreak(t *testing.T) {
+	var buf bytes.Buffer
+	FormatStreak(&buf, 12, 23, "2026-02-10", "2026-03-04", []bool{true, true, true, true, true, true, false}, []bool{true, true, true, true, true, true, true})
+	output := buf.String()
+
+	if !strings.Contains(output, "12") {
+		t.Error("expected current streak")
+	}
+	if !strings.Contains(output, "23") {
+		t.Error("expected longest streak")
+	}
+}
+
+func TestFormatReport(t *testing.T) {
+	var buf bytes.Buffer
+	r := ReportData{
+		StartDate:     "Mar 12",
+		EndDate:       "Mar 19",
+		TotalSessions: 12,
+		TotalProjects: 5,
+		TotalCommits:  34,
+		TotalFiles:    47,
+		TotalHours:    8.5,
+		TopProjects:   []ProjectActivity{{Name: "wraith", Sessions: 6, Commits: 18}},
+		Languages:     []LangPercent{{Lang: "Go", Percent: 62}},
+		Highlights:    []string{"Added retry logic"},
+	}
+	FormatReport(&buf, r)
+	output := buf.String()
+
+	if !strings.Contains(output, "REPORT") {
+		t.Error("expected REPORT header")
+	}
+	if !strings.Contains(output, "12 sessions") {
+		t.Error("expected session count")
+	}
+}
+
 func TestFormatRelativeTime(t *testing.T) {
 	now := time.Now()
 

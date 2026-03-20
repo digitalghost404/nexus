@@ -18,21 +18,21 @@ var (
 	log   *logger.Logger
 )
 
-// subcommands that take precedence over project name routing
-var subcommands = map[string]bool{
-	"init": true, "scan": true, "capture": true, "projects": true,
-	"sessions": true, "search": true, "show": true, "note": true,
-	"config": true, "help": true,
-}
-
 var rootCmd = &cobra.Command{
 	Use:   "nexus",
 	Short: "Track project health and Claude sessions",
 	Long:  "Nexus gives you a single pane of glass into all your projects and Claude Code sessions.",
 	Args:  cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Route to show if first arg is a known project name (not a subcommand)
-		if len(args) > 0 && !subcommands[args[0]] {
+		if len(args) > 0 {
+			// Check if first arg is a registered subcommand
+			for _, sub := range cmd.Commands() {
+				if sub.Name() == args[0] || sub.HasAlias(args[0]) {
+					// It's a subcommand, let cobra handle it
+					return nil
+				}
+			}
+			// Not a subcommand — try as project name
 			database, err := db.Open(config.DBPath())
 			if err == nil {
 				defer database.Close()
@@ -43,8 +43,6 @@ var rootCmd = &cobra.Command{
 				}
 			}
 		}
-
-		// Smart summary
 		return smartSummary()
 	},
 }
@@ -92,4 +90,11 @@ func init() {
 			LogFile: config.LogPath(),
 		})
 	})
+
+	rootCmd.AddGroup(
+		&cobra.Group{ID: "core", Title: "Core Commands:"},
+		&cobra.Group{ID: "query", Title: "Query Commands:"},
+		&cobra.Group{ID: "workflow", Title: "Workflow Commands:"},
+		&cobra.Group{ID: "maintenance", Title: "Maintenance Commands:"},
+	)
 }

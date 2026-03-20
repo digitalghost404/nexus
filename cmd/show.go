@@ -41,5 +41,6 @@ var showCmd = &cobra.Command{
 }
 
 func init() {
+	showCmd.GroupID = "query"
 	rootCmd.AddCommand(showCmd)
 }

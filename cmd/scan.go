@@ -156,6 +156,7 @@ func runScan(cfg config.Config, verbose bool) error {
 }
 
 func init() {
+	scanCmd.GroupID = "core"
 	scanCmd.Flags().BoolVarP(&scanVerbose, "verbose", "v", false, "Show scan details")
 	rootCmd.AddCommand(scanCmd)
 }

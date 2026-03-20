@@ -87,6 +87,7 @@ var configExcludeAddCmd = &cobra.Command{
 }
 
 func init() {
+	configCmd.GroupID = "maintenance"
 	configRootsCmd.AddCommand(configRootsAddCmd)
 	configExcludeCmd.AddCommand(configExcludeAddCmd)
 	configCmd.AddCommand(configShowCmd, configRootsCmd, configExcludeCmd)

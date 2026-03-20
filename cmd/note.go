@@ -53,5 +53,6 @@ var noteCmd = &cobra.Command{
 }
 
 func init() {
+	noteCmd.GroupID = "workflow"
 	rootCmd.AddCommand(noteCmd)
 }
