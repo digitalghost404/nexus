@@ -47,7 +47,9 @@ func Open(path string) (*DB, error) {
 
 func (d *DB) migrate() error {
 	var version int
-	d.db.QueryRow("PRAGMA user_version").Scan(&version)
+	if err := d.db.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
+		return fmt.Errorf("read schema version: %w", err)
+	}
 
 	if version == 0 {
 		if _, err := d.db.Exec(schemaSQL); err != nil {

@@ -17,8 +17,12 @@ func (d *DB) LinkProjects(projectID, linkedProjectID int64) error {
 }
 
 func (d *DB) UnlinkProjects(projectID, linkedProjectID int64) error {
-	d.db.Exec("DELETE FROM project_links WHERE project_id = ? AND linked_project_id = ?", projectID, linkedProjectID)
-	d.db.Exec("DELETE FROM project_links WHERE project_id = ? AND linked_project_id = ?", linkedProjectID, projectID)
+	if _, err := d.db.Exec("DELETE FROM project_links WHERE project_id = ? AND linked_project_id = ?", projectID, linkedProjectID); err != nil {
+		return fmt.Errorf("unlink: %w", err)
+	}
+	if _, err := d.db.Exec("DELETE FROM project_links WHERE project_id = ? AND linked_project_id = ?", linkedProjectID, projectID); err != nil {
+		return fmt.Errorf("unlink reverse: %w", err)
+	}
 	return nil
 }
 

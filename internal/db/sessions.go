@@ -91,7 +91,8 @@ func (d *DB) ListSessions(f SessionFilter) ([]Session, error) {
 	query += " ORDER BY s.started_at DESC"
 
 	if f.Limit > 0 {
-		query += fmt.Sprintf(" LIMIT %d", f.Limit)
+		query += " LIMIT ?"
+		args = append(args, f.Limit)
 	}
 
 	rows, err := d.db.Query(query, args...)

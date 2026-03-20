@@ -41,7 +41,9 @@ var tagCmd = &cobra.Command{
 			if latest == nil {
 				return fmt.Errorf("no sessions found for %s", p.Name)
 			}
-			database.RemoveSessionTag(latest.ID, tagRemove)
+			if err := database.RemoveSessionTag(latest.ID, tagRemove); err != nil {
+				return err
+			}
 			fmt.Printf("✓ Removed tag \"%s\" from session #%d\n", tagRemove, latest.ID)
 			return nil
 		}
@@ -79,7 +81,9 @@ var tagCmd = &cobra.Command{
 		}
 
 		if tagRemove != "" {
-			database.RemoveSessionTag(sessionID, tagRemove)
+			if err := database.RemoveSessionTag(sessionID, tagRemove); err != nil {
+				return err
+			}
 			fmt.Printf("✓ Removed tag \"%s\" from session #%d\n", tagRemove, sessionID)
 			return nil
 		}

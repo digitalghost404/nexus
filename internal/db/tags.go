@@ -28,7 +28,9 @@ func (d *DB) ListSessionTags(sessionID int64) ([]string, error) {
 	var tags []string
 	for rows.Next() {
 		var tag string
-		rows.Scan(&tag)
+		if err := rows.Scan(&tag); err != nil {
+			return nil, fmt.Errorf("scan tag: %w", err)
+		}
 		tags = append(tags, tag)
 	}
 	if err := rows.Err(); err != nil {

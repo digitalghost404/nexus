@@ -71,6 +71,11 @@ func runScan(cfg config.Config, verbose bool) error {
 
 		langsJSON, _ := json.Marshal(languages)
 
+		var lastCommitAt *time.Time
+		if !commitTime.IsZero() {
+			lastCommitAt = &commitTime
+		}
+
 		_, err := database.UpsertProject(db.Project{
 			Name:          name,
 			Path:          path,
@@ -78,7 +83,7 @@ func runScan(cfg config.Config, verbose bool) error {
 			Branch:        branch,
 			Dirty:         dirtyCount > 0,
 			DirtyFiles:    dirtyCount,
-			LastCommitAt:  &commitTime,
+			LastCommitAt:  lastCommitAt,
 			LastCommitMsg: commitMsg,
 			Ahead:         ahead,
 			Behind:        behind,
