@@ -105,3 +105,75 @@ func TestSessionDedup(t *testing.T) {
 		t.Error("expected session to exist")
 	}
 }
+
+func TestGetLatestSession(t *testing.T) {
+	d := testDB(t)
+	now := time.Now()
+	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: now})
+
+	earlier := now.Add(-2 * time.Hour)
+	d.InsertSession(Session{ProjectID: pID, Summary: "first", Source: "wrapper", StartedAt: &earlier})
+	d.InsertSession(Session{ProjectID: pID, Summary: "latest", Source: "wrapper", StartedAt: &now})
+
+	s, err := d.GetLatestSession(pID)
+	if err != nil {
+		t.Fatalf("get latest: %v", err)
+	}
+	if s == nil || s.Summary != "latest" {
+		t.Errorf("expected 'latest', got %v", s)
+	}
+}
+
+func TestGetLatestSessionEmpty(t *testing.T) {
+	d := testDB(t)
+	now := time.Now()
+	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: now})
+
+	s, err := d.GetLatestSession(pID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if s != nil {
+		t.Error("expected nil for empty project")
+	}
+}
+
+func TestGetSessionsInRange(t *testing.T) {
+	d := testDB(t)
+	now := time.Now()
+	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: now})
+
+	old := now.Add(-10 * 24 * time.Hour)
+	recent := now.Add(-1 * time.Hour)
+	d.InsertSession(Session{ProjectID: pID, Summary: "old", Source: "wrapper", StartedAt: &old})
+	d.InsertSession(Session{ProjectID: pID, Summary: "recent", Source: "wrapper", StartedAt: &recent})
+
+	since := now.Add(-7 * 24 * time.Hour)
+	sessions, err := d.GetSessionsInRange(pID, since, now)
+	if err != nil {
+		t.Fatalf("range: %v", err)
+	}
+	if len(sessions) != 1 || sessions[0].Summary != "recent" {
+		t.Errorf("expected 1 recent session, got %d", len(sessions))
+	}
+}
+
+func TestGetDistinctSessionDates(t *testing.T) {
+	d := testDB(t)
+	now := time.Now()
+	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: now})
+
+	day1 := now.Add(-48 * time.Hour)
+	day2 := now.Add(-24 * time.Hour)
+	d.InsertSession(Session{ProjectID: pID, Summary: "s1", Source: "wrapper", StartedAt: &day1})
+	d.InsertSession(Session{ProjectID: pID, Summary: "s2", Source: "wrapper", StartedAt: &day2})
+	d.InsertSession(Session{ProjectID: pID, Summary: "s3", Source: "wrapper", StartedAt: &now})
+
+	dates, err := d.GetDistinctSessionDates()
+	if err != nil {
+		t.Fatalf("dates: %v", err)
+	}
+	if len(dates) != 3 {
+		t.Errorf("expected 3 distinct dates, got %d", len(dates))
+	}
+}

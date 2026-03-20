@@ -144,6 +144,82 @@ func (d *DB) SearchSessions(query string) ([]Session, error) {
 	return sessions, nil
 }
 
+func (d *DB) GetLatestSession(projectID int64) (*Session, error) {
+	var s Session
+	err := d.db.QueryRow(`
+		SELECT s.id, s.project_id, COALESCE(s.claude_session_id, ''),
+			s.started_at, s.ended_at, s.duration_secs, COALESCE(s.summary, ''),
+			s.files_changed, s.commits_made, s.tags, s.source, s.created_at,
+			p.name
+		FROM sessions s
+		JOIN projects p ON p.id = s.project_id
+		WHERE s.project_id = ?
+		ORDER BY s.started_at DESC
+		LIMIT 1`, projectID).Scan(
+		&s.ID, &s.ProjectID, &s.ClaudeSessionID,
+		&s.StartedAt, &s.EndedAt, &s.DurationSecs, &s.Summary,
+		&s.FilesChanged, &s.CommitsMade, &s.Tags, &s.Source, &s.CreatedAt,
+		&s.ProjectName)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get latest session: %w", err)
+	}
+	return &s, nil
+}
+
+func (d *DB) GetSessionsInRange(projectID int64, since, until time.Time) ([]Session, error) {
+	rows, err := d.db.Query(`
+		SELECT s.id, s.project_id, COALESCE(s.claude_session_id, ''),
+			s.started_at, s.ended_at, s.duration_secs, COALESCE(s.summary, ''),
+			s.files_changed, s.commits_made, s.tags, s.source, s.created_at,
+			p.name
+		FROM sessions s
+		JOIN projects p ON p.id = s.project_id
+		WHERE s.project_id = ? AND s.started_at >= ? AND s.started_at <= ?
+		ORDER BY s.started_at DESC`, projectID, since, until)
+	if err != nil {
+		return nil, fmt.Errorf("sessions in range: %w", err)
+	}
+	defer rows.Close()
+
+	var sessions []Session
+	for rows.Next() {
+		var s Session
+		if err := rows.Scan(&s.ID, &s.ProjectID, &s.ClaudeSessionID,
+			&s.StartedAt, &s.EndedAt, &s.DurationSecs, &s.Summary,
+			&s.FilesChanged, &s.CommitsMade, &s.Tags, &s.Source, &s.CreatedAt,
+			&s.ProjectName); err != nil {
+			return nil, fmt.Errorf("scan session: %w", err)
+		}
+		sessions = append(sessions, s)
+	}
+	return sessions, nil
+}
+
+func (d *DB) GetDistinctSessionDates() ([]string, error) {
+	rows, err := d.db.Query(`
+		SELECT DISTINCT substr(CAST(started_at AS TEXT), 1, 10)
+		FROM sessions
+		WHERE started_at IS NOT NULL
+		ORDER BY 1 DESC`)
+	if err != nil {
+		return nil, fmt.Errorf("distinct dates: %w", err)
+	}
+	defer rows.Close()
+
+	var dates []string
+	for rows.Next() {
+		var d string
+		if err := rows.Scan(&d); err != nil {
+			return nil, err
+		}
+		dates = append(dates, d)
+	}
+	return dates, nil
+}
+
 func nilIfEmpty(s string) interface{} {
 	if s == "" {
 		return nil
