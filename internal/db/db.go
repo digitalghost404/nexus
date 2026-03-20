@@ -51,6 +51,11 @@ func (d *DB) migrate() error {
 		return fmt.Errorf("read schema version: %w", err)
 	}
 
+	const currentVersion = 2
+	if version > currentVersion {
+		return fmt.Errorf("database schema version %d is newer than supported version %d — upgrade nexus", version, currentVersion)
+	}
+
 	if version == 0 {
 		if _, err := d.db.Exec(schemaSQL); err != nil {
 			return fmt.Errorf("apply schema: %w", err)

@@ -11,6 +11,17 @@ import (
 
 var linkUnlink string
 
+func lookupProject(database *db.DB, name string) (*db.Project, error) {
+	p, err := database.GetProjectByName(name)
+	if err != nil {
+		return nil, fmt.Errorf("get project %s: %w", name, err)
+	}
+	if p == nil {
+		return nil, fmt.Errorf("project not found: %s", name)
+	}
+	return p, nil
+}
+
 var linkCmd = &cobra.Command{
 	Use:   "link <project-a> [project-b]",
 	Short: "Link related projects together",
@@ -23,16 +34,16 @@ var linkCmd = &cobra.Command{
 		}
 		defer database.Close()
 
-		p1, err := database.GetProjectByName(args[0])
-		if err != nil || p1 == nil {
-			return fmt.Errorf("project not found: %s", args[0])
+		p1, err := lookupProject(database, args[0])
+		if err != nil {
+			return err
 		}
 
 		// Unlink
 		if linkUnlink != "" {
-			p2, err := database.GetProjectByName(linkUnlink)
-			if err != nil || p2 == nil {
-				return fmt.Errorf("project not found: %s", linkUnlink)
+			p2, err := lookupProject(database, linkUnlink)
+			if err != nil {
+				return err
 			}
 			if err := database.UnlinkProjects(p1.ID, p2.ID); err != nil {
 				return err
@@ -43,7 +54,10 @@ var linkCmd = &cobra.Command{
 
 		// Show links (one arg)
 		if len(args) == 1 {
-			linked, _ := database.GetLinkedProjects(p1.ID)
+			linked, err := database.GetLinkedProjects(p1.ID)
+			if err != nil {
+				return err
+			}
 			if len(linked) == 0 {
 				fmt.Printf("No linked projects for %s\n", p1.Name)
 				return nil
@@ -56,9 +70,9 @@ var linkCmd = &cobra.Command{
 		}
 
 		// Create link (two args)
-		p2, err := database.GetProjectByName(args[1])
-		if err != nil || p2 == nil {
-			return fmt.Errorf("project not found: %s", args[1])
+		p2, err := lookupProject(database, args[1])
+		if err != nil {
+			return err
 		}
 
 		if err := database.LinkProjects(p1.ID, p2.ID); err != nil {

@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
 )
+
+var safePathRe = regexp.MustCompile(`^[a-zA-Z0-9/_.\-]+$`)
 
 const canonicalWrapper = `claude() { command claude "$@"; local rc=$?; nexus capture --dir "$PWD"; return $rc; }`
 
@@ -64,8 +67,8 @@ var hookInstallCmd = &cobra.Command{
 			if exeErr != nil {
 				nexusPath = home + "/go/bin/nexus"
 			}
-			// Validate path has no newlines or shell metacharacters
-			if strings.ContainsAny(nexusPath, "\n\r`$") {
+			// Validate path contains only safe characters
+			if !safePathRe.MatchString(nexusPath) {
 				return fmt.Errorf("nexus binary path contains unsafe characters: %s", nexusPath)
 			}
 			nexusDir := home + "/.nexus"
@@ -95,7 +98,8 @@ var hookUninstallCmd = &cobra.Command{
 		}
 		bashrc := home + "/.bashrc"
 
-		// Remove wrapper from .bashrc
+		// Remove wrapper from .bashrc, preserving original file permissions
+		info, statErr := os.Stat(bashrc)
 		data, err := os.ReadFile(bashrc)
 		if err == nil {
 			lines := strings.Split(string(data), "\n")
@@ -106,7 +110,11 @@ var hookUninstallCmd = &cobra.Command{
 				}
 				filtered = append(filtered, line)
 			}
-			if err := os.WriteFile(bashrc, []byte(strings.Join(filtered, "\n")), 0644); err != nil {
+			perm := os.FileMode(0644)
+			if statErr == nil {
+				perm = info.Mode().Perm()
+			}
+			if err := os.WriteFile(bashrc, []byte(strings.Join(filtered, "\n")), perm); err != nil {
 				return fmt.Errorf("write .bashrc: %w", err)
 			}
 			fmt.Println("✓ Removed claude() wrapper from ~/.bashrc")

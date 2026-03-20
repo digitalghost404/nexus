@@ -41,7 +41,10 @@ var rootCmd = &cobra.Command{
 				return fmt.Errorf("open db: %w", err)
 			}
 			defer database.Close()
-			p, _ := database.GetProjectByName(args[0])
+			p, err := database.GetProjectByName(args[0])
+			if err != nil {
+				return err
+			}
 			if p != nil {
 				showCmd.SetArgs(args)
 				return showCmd.RunE(showCmd, args)

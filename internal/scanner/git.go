@@ -228,11 +228,9 @@ func DetectLanguages(dir string) []string {
 		}
 		name := d.Name()
 		if d.IsDir() {
-			// Skip hidden dirs, common noise, and symlinks
+			// Skip hidden dirs and common noise.
+			// Note: WalkDir does not follow symlinks for directories.
 			if strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor" {
-				return filepath.SkipDir
-			}
-			if d.Type()&os.ModeSymlink != 0 {
 				return filepath.SkipDir
 			}
 			return nil

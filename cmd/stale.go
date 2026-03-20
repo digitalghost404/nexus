@@ -29,8 +29,14 @@ var staleCmd = &cobra.Command{
 		defer database.Close()
 
 		// Get idle and stale projects
-		idle, _ := database.ListProjects("idle")
-		staleProjs, _ := database.ListProjects("stale")
+		idle, err := database.ListProjects("idle")
+		if err != nil {
+			return err
+		}
+		staleProjs, err := database.ListProjects("stale")
+		if err != nil {
+			return err
+		}
 		allProjs := append(idle, staleProjs...)
 
 		// Collect stale branches and dirty details

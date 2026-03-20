@@ -27,9 +27,15 @@ var whereCmd = &cobra.Command{
 		query := strings.Join(args, " ")
 
 		// Search two sources: FTS on summary + LIKE on files_changed
-		ftsResults, _ := database.SearchSessions(query)
+		ftsResults, err := database.SearchSessions(query)
+		if err != nil {
+			return err
+		}
 
-		allSessions, _ := database.ListSessions(db.SessionFilter{Limit: 1000})
+		allSessions, err := database.ListSessions(db.SessionFilter{Limit: 1000})
+		if err != nil {
+			return err
+		}
 		var fileResults []db.Session
 		for _, s := range allSessions {
 			if strings.Contains(strings.ToLower(s.FilesChanged), strings.ToLower(query)) {

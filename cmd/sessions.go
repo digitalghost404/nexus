@@ -89,6 +89,9 @@ func parseDuration(s string) (*time.Time, error) {
 	if count, _ := fmt.Sscanf(s[:len(s)-1], "%d", &n); count == 0 {
 		return nil, fmt.Errorf("invalid duration: %s", s)
 	}
+	if n <= 0 {
+		return nil, fmt.Errorf("duration must be positive: %s", s)
+	}
 
 	var d time.Duration
 	switch unit {

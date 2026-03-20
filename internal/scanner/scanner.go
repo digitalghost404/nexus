@@ -28,10 +28,8 @@ func Discover(roots []string, exclude []string) ([]string, error) {
 				return nil
 			}
 
-			// Skip symlinks to prevent traversal outside scan roots
-			if d.Type()&os.ModeSymlink != 0 {
-				return filepath.SkipDir
-			}
+			// Note: WalkDir does not follow symlinks for directories,
+			// so symlink traversal is prevented by WalkDir's semantics.
 
 			// Check exclusions
 			for _, pattern := range exclude {

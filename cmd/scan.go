@@ -104,7 +104,10 @@ func runScan(cfg config.Config, verbose bool) error {
 	}
 
 	// Archive disappeared projects
-	allProjects, _ := database.ListProjects("")
+	allProjects, err := database.ListProjects("")
+	if err != nil {
+		return fmt.Errorf("list projects: %w", err)
+	}
 	for _, p := range allProjects {
 		if _, err := os.Stat(p.Path); os.IsNotExist(err) {
 			if err := database.ArchiveProject(p.ID); err != nil && verbose {
@@ -118,7 +121,10 @@ func runScan(cfg config.Config, verbose bool) error {
 
 	// Safety net: create inferred sessions from unrecorded git activity
 	inferredCount := 0
-	allProjects, _ = database.ListProjects("")
+	allProjects, err = database.ListProjects("")
+	if err != nil {
+		return fmt.Errorf("list projects for inference: %w", err)
+	}
 	for _, proj := range allProjects {
 		if !scanner.IsGitRepo(proj.Path) {
 			continue

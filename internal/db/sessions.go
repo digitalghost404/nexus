@@ -254,9 +254,7 @@ func defaultJSON(s string) string {
 
 // sanitizeFTS escapes FTS5 special syntax by wrapping in double quotes.
 func sanitizeFTS(q string) string {
+	q = strings.ReplaceAll(q, "\x00", "")
 	escaped := strings.ReplaceAll(q, `"`, `""`)
 	return `"` + escaped + `"`
 }
-
-// Ensure sql package is used (for sql.ErrNoRows in other files)
-var _ = sql.ErrNoRows

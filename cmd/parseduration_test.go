@@ -18,17 +18,12 @@ func TestParseDuration(t *testing.T) {
 		{input: "7d", wantErr: false, approxAgo: 7 * 24 * time.Hour},
 		{input: "24h", wantErr: false, approxAgo: 24 * time.Hour},
 		{input: "30m", wantErr: false, approxAgo: 30 * time.Minute},
-		// Known edge case: "0d" parses successfully (zero duration → time.Now()).
-		// The function does not reject zero values; this test documents that behaviour.
-		{input: "0d", wantErr: false, approxAgo: 0},
+		{input: "0d", wantErr: true},  // zero duration rejected
 		{input: "", wantErr: true},
 		{input: "d", wantErr: true},
 		{input: "1", wantErr: true},
 		{input: "7D", wantErr: true},
-		// "-1d": Sscanf does parse -1, producing a duration of -1 day which
-		// results in a time ~1 day in the future (now - (-1d) = now + 1d).
-		// parseDuration does not reject this; the test documents the behaviour.
-		{input: "-1d", wantErr: false, approxAgo: -24 * time.Hour},
+		{input: "-1d", wantErr: true}, // negative duration rejected
 	}
 
 	for _, tt := range tests {

@@ -30,13 +30,19 @@ var depsCmd = &cobra.Command{
 
 		var projects []db.Project
 		if depsProject != "" {
-			p, _ := database.GetProjectByName(depsProject)
+			p, err := database.GetProjectByName(depsProject)
+			if err != nil {
+				return err
+			}
 			if p == nil {
 				return fmt.Errorf("project not found: %s", depsProject)
 			}
 			projects = []db.Project{*p}
 		} else {
-			projects, _ = database.ListProjects("")
+			projects, err = database.ListProjects("")
+			if err != nil {
+				return err
+			}
 		}
 
 		hasGo, _ := exec.LookPath("go")
