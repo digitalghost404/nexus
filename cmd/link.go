@@ -34,7 +34,9 @@ var linkCmd = &cobra.Command{
 			if err != nil || p2 == nil {
 				return fmt.Errorf("project not found: %s", linkUnlink)
 			}
-			database.UnlinkProjects(p1.ID, p2.ID)
+			if err := database.UnlinkProjects(p1.ID, p2.ID); err != nil {
+				return err
+			}
 			fmt.Printf("✓ Unlinked %s ↔ %s\n", p1.Name, p2.Name)
 			return nil
 		}

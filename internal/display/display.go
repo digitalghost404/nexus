@@ -237,6 +237,8 @@ func FormatSearchResults(w io.Writer, sessions []db.Session, notes []db.Note) {
 func RelativeTime(t time.Time) string {
 	d := time.Since(t)
 	switch {
+	case d < 0:
+		return "just now"
 	case d < time.Minute:
 		return "just now"
 	case d < time.Hour:
@@ -251,10 +253,11 @@ func RelativeTime(t time.Time) string {
 }
 
 func truncate(s string, max int) string {
-	if len(s) <= max {
+	runes := []rune(s)
+	if len(runes) <= max {
 		return s
 	}
-	return s[:max-3] + "..."
+	return string(runes[:max-3]) + "..."
 }
 
 func FormatResume(w io.Writer, s *db.Session, dirtyFiles []string) {

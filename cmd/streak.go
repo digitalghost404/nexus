@@ -60,7 +60,8 @@ var streakCmd = &cobra.Command{
 			} else {
 				prev, _ := time.Parse("2006-01-02", dates[i+1])
 				curr, _ := time.Parse("2006-01-02", dates[i])
-				if curr.Sub(prev) == 24*time.Hour {
+				// Compare by date arithmetic instead of duration to avoid DST issues
+				if curr.Equal(prev.AddDate(0, 0, 1)) {
 					streak++
 				} else {
 					if streak > longest {

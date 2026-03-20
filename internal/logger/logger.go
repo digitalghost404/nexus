@@ -34,7 +34,7 @@ func New(cfg Config) *Logger {
 	l := &Logger{cfg: cfg, stderr: cfg.Stderr}
 
 	if cfg.LogFile != "" {
-		f, err := os.OpenFile(cfg.LogFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+		f, err := os.OpenFile(cfg.LogFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 		if err == nil {
 			l.file = f
 			info, _ := f.Stat()
@@ -84,7 +84,7 @@ func (l *Logger) rotate() {
 	l.file.Close()
 	l.file = nil
 	os.Truncate(l.cfg.LogFile, 0)
-	f, err := os.OpenFile(l.cfg.LogFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	f, err := os.OpenFile(l.cfg.LogFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if err == nil {
 		l.file = f
 		l.written = 0

@@ -19,13 +19,18 @@ func Discover(roots []string, exclude []string) ([]string, error) {
 			continue
 		}
 
-		filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 			if err != nil {
 				return nil
 			}
 
-			if !info.IsDir() {
+			if !d.IsDir() {
 				return nil
+			}
+
+			// Skip symlinks to prevent traversal outside scan roots
+			if d.Type()&os.ModeSymlink != 0 {
+				return filepath.SkipDir
 			}
 
 			// Check exclusions

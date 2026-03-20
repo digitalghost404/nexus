@@ -41,22 +41,22 @@ func GetDirtyFileCount(dir string) (int, error) {
 }
 
 func GetLastCommit(dir string) (message string, when time.Time, err error) {
-	msg, err := gitCmd(dir, "log", "-1", "--format=%s")
+	out, err := gitCmd(dir, "log", "-1", "--format=%s%x00%aI")
 	if err != nil {
 		return "", time.Time{}, err
 	}
 
-	ts, err := gitCmd(dir, "log", "-1", "--format=%aI")
-	if err != nil {
-		return "", time.Time{}, err
+	parts := strings.SplitN(out, "\x00", 2)
+	if len(parts) != 2 {
+		return "", time.Time{}, fmt.Errorf("unexpected git log output: %s", out)
 	}
 
-	t, err := time.Parse(time.RFC3339, ts)
+	t, err := time.Parse(time.RFC3339, parts[1])
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("parse time: %w", err)
 	}
 
-	return msg, t, nil
+	return parts[0], t, nil
 }
 
 func GetAheadBehind(dir string) (ahead, behind int, err error) {
@@ -70,15 +70,16 @@ func GetAheadBehind(dir string) (ahead, behind int, err error) {
 }
 
 func GetCommitsSince(dir string, since time.Time) ([]CommitInfo, error) {
+	// Use %x00 (null byte) as separator since commit messages can contain |
 	out, err := gitCmd(dir, "log", "--since="+since.Format(time.RFC3339),
-		"--format=%H|%s|%aI", "--no-merges")
+		"--format=%H%x00%s%x00%aI", "--no-merges")
 	if err != nil || out == "" {
 		return nil, err
 	}
 
 	var commits []CommitInfo
 	for _, line := range strings.Split(out, "\n") {
-		parts := strings.SplitN(line, "|", 3)
+		parts := strings.SplitN(line, "\x00", 3)
 		if len(parts) != 3 {
 			continue
 		}
@@ -177,7 +178,7 @@ func GetStaleBranches(dir string, olderThan time.Duration) ([]string, error) {
 // GetStaleBranchesWithDates returns stale branches together with their last commit time.
 func GetStaleBranchesWithDates(dir string, olderThan time.Duration) ([]StaleBranch, error) {
 	out, err := gitCmd(dir, "for-each-ref", "--sort=-committerdate",
-		"--format=%(refname:short)|%(committerdate:iso-strict)", "refs/heads/")
+		"--format=%(refname:short)%00%(committerdate:iso-strict)", "refs/heads/")
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +189,7 @@ func GetStaleBranchesWithDates(dir string, olderThan time.Duration) ([]StaleBran
 	cutoff := time.Now().Add(-olderThan)
 	var stale []StaleBranch
 	for _, line := range strings.Split(out, "\n") {
-		parts := strings.SplitN(line, "|", 2)
+		parts := strings.SplitN(line, "\x00", 2)
 		if len(parts) != 2 {
 			continue
 		}
@@ -221,14 +222,20 @@ var langMap = map[string]string{
 
 func DetectLanguages(dir string) []string {
 	seen := map[string]bool{}
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
-		// Skip hidden dirs and common noise
-		name := info.Name()
-		if info.IsDir() && (strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor") {
-			return filepath.SkipDir
+		name := d.Name()
+		if d.IsDir() {
+			// Skip hidden dirs, common noise, and symlinks
+			if strings.HasPrefix(name, ".") || name == "node_modules" || name == "vendor" {
+				return filepath.SkipDir
+			}
+			if d.Type()&os.ModeSymlink != 0 {
+				return filepath.SkipDir
+			}
+			return nil
 		}
 		ext := filepath.Ext(name)
 		if lang, ok := langMap[ext]; ok {

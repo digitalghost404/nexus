@@ -21,7 +21,10 @@ var hookInstallCmd = &cobra.Command{
 	Use:   "install",
 	Short: "Install claude() wrapper and nexus scan cron job",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		home, _ := os.UserHomeDir()
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("cannot determine home directory: %w", err)
+		}
 		bashrc := home + "/.bashrc"
 
 		// Read .bashrc
@@ -46,7 +49,9 @@ var hookInstallCmd = &cobra.Command{
 				return fmt.Errorf("open .bashrc: %w", err)
 			}
 			fmt.Fprintf(f, "\n# Nexus: auto-capture Claude sessions\n%s\n", canonicalWrapper)
-			f.Close()
+			if err := f.Close(); err != nil {
+				return fmt.Errorf("write .bashrc: %w", err)
+			}
 			fmt.Println("✓ Added claude() wrapper to ~/.bashrc")
 		}
 
@@ -56,9 +61,13 @@ var hookInstallCmd = &cobra.Command{
 			fmt.Println("✓ Cron job already installed")
 		} else {
 			nexusPath, exeErr := os.Executable()
-		if exeErr != nil {
-			nexusPath = home + "/go/bin/nexus"
-		}
+			if exeErr != nil {
+				nexusPath = home + "/go/bin/nexus"
+			}
+			// Validate path has no newlines or shell metacharacters
+			if strings.ContainsAny(nexusPath, "\n\r`$") {
+				return fmt.Errorf("nexus binary path contains unsafe characters: %s", nexusPath)
+			}
 			nexusDir := home + "/.nexus"
 			cronLine := fmt.Sprintf("*/30 * * * * %s scan >> %s/nexus.log 2>&1", nexusPath, nexusDir)
 
@@ -80,7 +89,10 @@ var hookUninstallCmd = &cobra.Command{
 	Use:   "uninstall",
 	Short: "Remove claude() wrapper and nexus scan cron job",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		home, _ := os.UserHomeDir()
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("cannot determine home directory: %w", err)
+		}
 		bashrc := home + "/.bashrc"
 
 		// Remove wrapper from .bashrc
@@ -94,7 +106,9 @@ var hookUninstallCmd = &cobra.Command{
 				}
 				filtered = append(filtered, line)
 			}
-			os.WriteFile(bashrc, []byte(strings.Join(filtered, "\n")), 0644)
+			if err := os.WriteFile(bashrc, []byte(strings.Join(filtered, "\n")), 0644); err != nil {
+				return fmt.Errorf("write .bashrc: %w", err)
+			}
 			fmt.Println("✓ Removed claude() wrapper from ~/.bashrc")
 		}
 
@@ -110,7 +124,9 @@ var hookUninstallCmd = &cobra.Command{
 			}
 			cronCmd := exec.Command("crontab", "-")
 			cronCmd.Stdin = strings.NewReader(strings.Join(filtered, "\n"))
-			cronCmd.Run()
+			if err := cronCmd.Run(); err != nil {
+				return fmt.Errorf("remove cron: %w", err)
+			}
 			fmt.Println("✓ Removed nexus scan cron job")
 		}
 

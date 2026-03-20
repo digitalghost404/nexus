@@ -4,6 +4,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -128,7 +129,7 @@ func (d *DB) SearchSessions(query string) ([]Session, error) {
 		JOIN sessions s ON s.id = fts.rowid
 		JOIN projects p ON p.id = s.project_id
 		WHERE sessions_fts MATCH ?
-		ORDER BY rank`, query)
+		ORDER BY rank`, sanitizeFTS(query))
 	if err != nil {
 		return nil, fmt.Errorf("search sessions: %w", err)
 	}
@@ -249,6 +250,12 @@ func defaultJSON(s string) string {
 		return "[]"
 	}
 	return s
+}
+
+// sanitizeFTS escapes FTS5 special syntax by wrapping in double quotes.
+func sanitizeFTS(q string) string {
+	escaped := strings.ReplaceAll(q, `"`, `""`)
+	return `"` + escaped + `"`
 }
 
 // Ensure sql package is used (for sql.ErrNoRows in other files)

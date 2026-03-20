@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/digitalghost404/nexus/internal/config"
@@ -98,9 +99,16 @@ var staleCmd = &cobra.Command{
 			return nil
 		}
 
-		// Interactive cleanup
+		// Interactive cleanup — sort for deterministic order
+		var sortedPaths []string
+		for p := range branchesByPath {
+			sortedPaths = append(sortedPaths, p)
+		}
+		sort.Strings(sortedPaths)
+
 		reader := bufio.NewReader(os.Stdin)
-		for projPath, brs := range branchesByPath {
+		for _, projPath := range sortedPaths {
+			brs := branchesByPath[projPath]
 			info := projectsByPath[projPath]
 
 			fmt.Printf("\n%s\n", info.name)

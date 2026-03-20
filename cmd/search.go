@@ -43,7 +43,10 @@ var searchCmd = &cobra.Command{
 
 		// Filter by project if specified
 		if searchProject != "" {
-			p, _ := database.GetProjectByName(searchProject)
+			p, err := database.GetProjectByName(searchProject)
+			if err != nil {
+				return err
+			}
 			if p != nil {
 				var filtered []db.Session
 				for _, s := range sessions {

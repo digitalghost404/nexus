@@ -17,7 +17,7 @@ var initCmd = &cobra.Command{
 		nexusDir := config.NexusDir()
 
 		// Create directory
-		if err := os.MkdirAll(nexusDir, 0755); err != nil {
+		if err := os.MkdirAll(nexusDir, 0700); err != nil {
 			return fmt.Errorf("create nexus dir: %w", err)
 		}
 		fmt.Printf("Created %s\n", nexusDir)

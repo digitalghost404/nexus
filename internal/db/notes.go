@@ -63,7 +63,7 @@ func (d *DB) SearchNotes(query string) ([]Note, error) {
 		FROM notes_fts fts
 		JOIN notes n ON n.id = fts.rowid
 		WHERE notes_fts MATCH ?
-		ORDER BY rank`, query)
+		ORDER BY rank`, sanitizeFTS(query))
 	if err != nil {
 		return nil, fmt.Errorf("search notes: %w", err)
 	}

@@ -43,7 +43,10 @@ func CaptureSession(database *db.DB, workDir string, claudeDir string) (*Capture
 		claudeSessionID = claudeSession.SessionID
 
 		// Check for duplicate
-		exists, _ := database.SessionExists(claudeSessionID)
+		exists, err := database.SessionExists(claudeSessionID)
+		if err != nil {
+			return nil, fmt.Errorf("check session exists: %w", err)
+		}
 		if exists {
 			return &CaptureResult{ProjectName: projectName, Summary: "duplicate session, skipped"}, nil
 		}

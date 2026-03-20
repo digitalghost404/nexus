@@ -91,13 +91,15 @@ func runScan(cfg config.Config, verbose bool) error {
 			DiscoveredAt:  now,
 			LastScannedAt: &now,
 		})
+		if err != nil {
+			if verbose {
+				fmt.Printf("  ✗ %s: %v\n", name, err)
+			}
+			continue
+		}
 
 		if verbose {
-			if err != nil {
-				fmt.Printf("  ✗ %s: %v\n", name, err)
-			} else {
-				fmt.Printf("  ✓ %s (%s, %s)\n", name, branch, status)
-			}
+			fmt.Printf("  ✓ %s (%s, %s)\n", name, branch, status)
 		}
 	}
 
@@ -105,7 +107,9 @@ func runScan(cfg config.Config, verbose bool) error {
 	allProjects, _ := database.ListProjects("")
 	for _, p := range allProjects {
 		if _, err := os.Stat(p.Path); os.IsNotExist(err) {
-			database.ArchiveProject(p.ID)
+			if err := database.ArchiveProject(p.ID); err != nil && verbose {
+				fmt.Printf("  ✗ Archive %s: %v\n", p.Name, err)
+			}
 			if verbose {
 				fmt.Printf("  ⚠ Archived: %s (path no longer exists)\n", p.Name)
 			}
@@ -141,7 +145,7 @@ func runScan(cfg config.Config, verbose bool) error {
 		languages := scanner.DetectLanguages(proj.Path)
 		tags := capture.GenerateTags(proj.Name, languages)
 
-		database.InsertSession(db.Session{
+		if _, err := database.InsertSession(db.Session{
 			ProjectID:    proj.ID,
 			StartedAt:    &since,
 			EndedAt:      &now,
@@ -151,7 +155,12 @@ func runScan(cfg config.Config, verbose bool) error {
 			CommitsMade:  capture.CommitsToJSON(commits),
 			Tags:         capture.TagsToJSON(tags),
 			Source:       "scan",
-		})
+		}); err != nil {
+			if verbose {
+				fmt.Printf("  ✗ Infer session for %s: %v\n", proj.Name, err)
+			}
+			continue
+		}
 		inferredCount++
 	}
 

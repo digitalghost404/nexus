@@ -48,8 +48,9 @@ func (d *DB) UpsertProject(p Project) (int64, error) {
 	}
 	// LastInsertId returns 0 on update, get the real ID
 	if id == 0 {
-		row := d.db.QueryRow("SELECT id FROM projects WHERE path = ?", p.Path)
-		row.Scan(&id)
+		if err := d.db.QueryRow("SELECT id FROM projects WHERE path = ?", p.Path).Scan(&id); err != nil {
+			return 0, fmt.Errorf("get project id after upsert: %w", err)
+		}
 	}
 	return id, nil
 }
