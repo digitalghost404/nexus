@@ -13,6 +13,9 @@ import (
 //go:embed schema.sql
 var schemaSQL string
 
+//go:embed migration_v2.sql
+var migrationV2SQL string
+
 type DB struct {
 	db *sql.DB
 }
@@ -50,7 +53,16 @@ func (d *DB) migrate() error {
 		if _, err := d.db.Exec(schemaSQL); err != nil {
 			return fmt.Errorf("apply schema: %w", err)
 		}
-		if _, err := d.db.Exec("PRAGMA user_version = 1"); err != nil {
+		if _, err := d.db.Exec("PRAGMA user_version = 2"); err != nil {
+			return fmt.Errorf("set version: %w", err)
+		}
+	}
+
+	if version == 1 {
+		if _, err := d.db.Exec(migrationV2SQL); err != nil {
+			return fmt.Errorf("apply v2 migration: %w", err)
+		}
+		if _, err := d.db.Exec("PRAGMA user_version = 2"); err != nil {
 			return fmt.Errorf("set version: %w", err)
 		}
 	}
