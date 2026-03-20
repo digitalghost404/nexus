@@ -1,8 +1,57 @@
 # Nexus
 
-A CLI tool that tracks your project health and Claude Code sessions from a single command. One binary, no daemon, no dependencies beyond Go.
+A CLI tool that gives Claude Code persistent memory across sessions. One binary, no daemon, no dependencies beyond Go.
 
-Nexus answers two questions: **"what's the state of everything?"** and **"what did I do last?"**
+Nexus solves the biggest limitation of AI-assisted development: **context loss between sessions.** Every time you start a new Claude Code conversation, the AI starts from zero — no memory of what you built yesterday, what decisions you made, or where you left off. Nexus fixes that by automatically tracking every session, every project, and every change, then making all of it instantly available to Claude in future conversations.
+
+## Why Nexus Exists
+
+Claude Code is powerful within a single session, but across sessions it has no memory. You end up re-explaining your project, re-briefing context, and losing momentum. Nexus closes that gap:
+
+- **Before Nexus:** "Hey Claude, last week we refactored the auth module and decided to use JWTs instead of session tokens. The migration is half done. Here's what's left..."
+- **After Nexus:** Claude runs `nexus resume` and instantly knows what happened, what changed, and what's next.
+
+Nexus answers three questions: **"What's the state of everything?"**, **"What did I do last?"**, and **"What should Claude know before we start?"**
+
+## How It Makes Claude Code Better
+
+### Persistent Memory for AI Sessions
+
+Nexus automatically captures every Claude Code session — what files were changed, what commits were made, and what the session accomplished. This data persists in a local SQLite database that survives across conversations. When you start a new session, Claude can query Nexus to understand:
+
+- What you worked on recently across all your projects
+- The current health and status of every tracked project
+- What files were modified, what branches are active, and what's dirty
+- Full-text searchable history of all past sessions and notes
+
+### Context Export for Claude
+
+The `nexus context` command exports a project's full state as markdown — recent sessions, notes, linked projects, and git status — formatted specifically for pasting into Claude. This gives Claude a structured briefing that replaces the manual re-explanation you'd otherwise have to do at the start of every conversation.
+
+```bash
+nexus context myproject    # Export recent history + state as markdown
+nexus resume myproject     # Get a "pick up where you left off" summary
+```
+
+### Cross-Session Search
+
+Forgot which project had that retry logic? Can't remember when you refactored the database layer? Nexus provides full-text search across all session summaries, notes, and file paths:
+
+```bash
+nexus search "retry logic"        # Find it across all projects
+nexus where "database migration"  # Find which projects and files match
+```
+
+### The Memory Loop
+
+The real power is the workflow loop this enables with Claude Code:
+
+1. **You work with Claude** — Nexus captures the session automatically
+2. **You come back later** — Claude queries Nexus for context
+3. **Claude picks up where you left off** — no re-briefing needed
+4. **Repeat** — context accumulates over days, weeks, months
+
+This transforms Claude Code from a stateless tool into something that genuinely knows your projects.
 
 ## Install
 
@@ -42,6 +91,8 @@ Or let Nexus do it for you:
 nexus hook install
 source ~/.bashrc
 ```
+
+This is the critical piece — once the hook is installed, every Claude Code session is automatically recorded. No manual effort required.
 
 ### Periodic Scanning
 
@@ -153,14 +204,15 @@ All data is stored in a single SQLite database at `~/.nexus/nexus.db` (WAL mode 
 - Health status (active / idle / stale)
 - Detected languages
 - Stale branches
+- Links to related projects
 
 **Per session:**
 - Start/end time, duration
 - Files changed, commits made
 - Auto-generated summary from git data
 - Auto-tags (project name, languages)
-- User tags
-- Claude session ID (for correlation)
+- User tags for categorization
+- Claude session ID (for correlation with `~/.claude/` data)
 
 ### Session Summary Generation
 
@@ -169,6 +221,23 @@ Summaries are generated in layers:
 1. **Git-based** (always available) -- Commits and diffs from the session window
 2. **Claude session data** (opportunistic) -- Parsed from `~/.claude/` if available
 3. **Manual notes** -- `nexus note "message"` for your own context
+
+### Integration with Claude Code's Memory System
+
+Nexus complements Claude Code's built-in auto-memory (stored in `.claude/` project directories). While Claude's auto-memory captures preferences, feedback, and user context within a project, Nexus provides the **cross-project, cross-session timeline** that auto-memory can't:
+
+| Capability | Claude Auto-Memory | Nexus |
+|---|---|---|
+| User preferences | Yes | No |
+| Per-project context | Yes | Yes |
+| Cross-project overview | No | Yes |
+| Session history & timeline | No | Yes |
+| File change tracking | No | Yes |
+| Full-text search over history | No | Yes |
+| Git health monitoring | No | Yes |
+| Dependency status | No | Yes |
+
+The ideal setup uses both: Claude's auto-memory for *how* to work with you, and Nexus for *what* you've been working on.
 
 ### Health Status
 
