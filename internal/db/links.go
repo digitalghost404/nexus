@@ -46,5 +46,8 @@ func (d *DB) GetLinkedProjects(projectID int64) ([]Project, error) {
 		}
 		projects = append(projects, p)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate rows: %w", err)
+	}
 	return projects, nil
 }

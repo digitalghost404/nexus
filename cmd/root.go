@@ -13,15 +13,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var Version = "0.2.0"
+
 var (
 	debug bool
 	log   *logger.Logger
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "nexus",
-	Short: "Track project health and Claude sessions",
-	Long:  "Nexus gives you a single pane of glass into all your projects and Claude Code sessions.",
+	Use:     "nexus",
+	Short:   "Track project health and Claude sessions",
+	Long:    "Nexus gives you a single pane of glass into all your projects and Claude Code sessions.",
+	Version: Version,
 	Args:  cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) > 0 {

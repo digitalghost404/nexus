@@ -51,6 +51,9 @@ func (d *DB) ListNotes(projectID int64, limit int) ([]Note, error) {
 		}
 		notes = append(notes, n)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate rows: %w", err)
+	}
 	return notes, nil
 }
 
@@ -73,6 +76,9 @@ func (d *DB) SearchNotes(query string) ([]Note, error) {
 			return nil, fmt.Errorf("scan note: %w", err)
 		}
 		notes = append(notes, n)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate rows: %w", err)
 	}
 	return notes, nil
 }

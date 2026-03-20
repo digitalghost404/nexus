@@ -34,12 +34,12 @@ var initCmd = &cobra.Command{
 		cfgPath := config.ConfigPath()
 		if _, err := os.Stat(cfgPath); os.IsNotExist(err) {
 			cfg := config.Default()
-			home, _ := os.UserHomeDir()
-			cfg.Roots = []string{home + "/projects-wsl"}
+			cfg.Roots = []string{}
 			if err := config.Save(cfgPath, cfg); err != nil {
 				return fmt.Errorf("save config: %w", err)
 			}
 			fmt.Printf("Created config at %s\n", cfgPath)
+			fmt.Println("No scan roots configured. Add one with: nexus config roots add ~/your-projects")
 		}
 
 		// Print shell wrapper instructions

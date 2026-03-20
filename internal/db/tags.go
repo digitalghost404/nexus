@@ -31,6 +31,9 @@ func (d *DB) ListSessionTags(sessionID int64) ([]string, error) {
 		rows.Scan(&tag)
 		tags = append(tags, tag)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate rows: %w", err)
+	}
 	return tags, nil
 }
 
@@ -60,6 +63,9 @@ func (d *DB) ListSessionsByTag(tag string) ([]Session, error) {
 			return nil, err
 		}
 		sessions = append(sessions, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate rows: %w", err)
 	}
 	return sessions, nil
 }

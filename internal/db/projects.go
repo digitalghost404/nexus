@@ -124,6 +124,9 @@ func (d *DB) ListProjects(status string) ([]Project, error) {
 		}
 		projects = append(projects, p)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate rows: %w", err)
+	}
 	return projects, nil
 }
 
@@ -152,6 +155,9 @@ func (d *DB) ListDirtyProjects() ([]Project, error) {
 			return nil, fmt.Errorf("scan project: %w", err)
 		}
 		projects = append(projects, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate rows: %w", err)
 	}
 	return projects, nil
 }

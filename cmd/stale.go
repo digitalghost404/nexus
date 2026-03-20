@@ -100,6 +100,9 @@ var staleCmd = &cobra.Command{
 				fmt.Printf("  %s  (last commit: %s)\n", b.Name, b.Age)
 				fmt.Printf("  Delete? [y/n/q] ")
 				input, _ := reader.ReadString('\n')
+				if len(input) == 0 {
+					continue
+				}
 				switch input[0] {
 				case 'y', 'Y':
 					err := scanner.DeleteBranch(projPath, b.Name)

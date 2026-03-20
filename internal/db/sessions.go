@@ -111,6 +111,9 @@ func (d *DB) ListSessions(f SessionFilter) ([]Session, error) {
 		}
 		sessions = append(sessions, s)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate rows: %w", err)
+	}
 	return sessions, nil
 }
 
@@ -140,6 +143,9 @@ func (d *DB) SearchSessions(query string) ([]Session, error) {
 			return nil, fmt.Errorf("scan search result: %w", err)
 		}
 		sessions = append(sessions, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate rows: %w", err)
 	}
 	return sessions, nil
 }
@@ -195,6 +201,9 @@ func (d *DB) GetSessionsInRange(projectID int64, since, until time.Time) ([]Sess
 		}
 		sessions = append(sessions, s)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate rows: %w", err)
+	}
 	return sessions, nil
 }
 
@@ -220,6 +229,9 @@ func (d *DB) GetDistinctSessionDates() ([]string, error) {
 			return nil, err
 		}
 		dates = append(dates, d)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate rows: %w", err)
 	}
 	return dates, nil
 }
