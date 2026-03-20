@@ -121,6 +121,37 @@ func GetChangedFiles(dir string, since time.Time) ([]string, error) {
 	return files, nil
 }
 
+func DeleteBranch(dir, branch string) error {
+	_, err := gitCmd(dir, "branch", "-d", branch)
+	return err
+}
+
+type DirtyFile struct {
+	Status string // "M", "A", "D", "??"
+	Path   string
+}
+
+func GetDirtyFileDetails(dir string) ([]DirtyFile, error) {
+	out, err := gitCmd(dir, "status", "--porcelain")
+	if err != nil {
+		return nil, err
+	}
+	if out == "" {
+		return nil, nil
+	}
+	var files []DirtyFile
+	for _, line := range strings.Split(out, "\n") {
+		if len(line) < 4 {
+			continue
+		}
+		files = append(files, DirtyFile{
+			Status: strings.TrimSpace(line[:2]),
+			Path:   line[3:],
+		})
+	}
+	return files, nil
+}
+
 func GetStaleBranches(dir string, olderThan time.Duration) ([]string, error) {
 	out, err := gitCmd(dir, "for-each-ref", "--sort=-committerdate",
 		"--format=%(refname:short)|%(committerdate:iso-strict)", "refs/heads/")

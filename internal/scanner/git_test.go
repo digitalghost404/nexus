@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -96,5 +97,45 @@ func TestDetectLanguages(t *testing.T) {
 	}
 	if !found["typescript"] {
 		t.Error("expected typescript in languages")
+	}
+}
+
+func TestDeleteBranch(t *testing.T) {
+	repo := CreateTestRepo(t, filepath.Join(t.TempDir(), "test-repo"))
+
+	// Create and switch to a new branch, then switch back
+	run := func(args ...string) {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = repo
+		cmd.CombinedOutput()
+	}
+	run("checkout", "-b", "feature-old")
+	run("checkout", "main")
+
+	err := DeleteBranch(repo, "feature-old")
+	if err != nil {
+		t.Fatalf("DeleteBranch: %v", err)
+	}
+
+	// Verify branch is gone
+	out, _ := exec.Command("git", "-C", repo, "branch").Output()
+	if strings.Contains(string(out), "feature-old") {
+		t.Error("branch should have been deleted")
+	}
+}
+
+func TestGetDirtyFileDetails(t *testing.T) {
+	repo := CreateTestRepo(t, filepath.Join(t.TempDir(), "test-repo"))
+
+	// Create modified and untracked files
+	os.WriteFile(filepath.Join(repo, "README.md"), []byte("modified"), 0644)
+	os.WriteFile(filepath.Join(repo, "new.txt"), []byte("new"), 0644)
+
+	details, err := GetDirtyFileDetails(repo)
+	if err != nil {
+		t.Fatalf("GetDirtyFileDetails: %v", err)
+	}
+	if len(details) != 2 {
+		t.Errorf("expected 2 dirty files, got %d", len(details))
 	}
 }
