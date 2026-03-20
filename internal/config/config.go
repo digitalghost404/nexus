@@ -54,6 +54,25 @@ func Load(path string) (Config, error) {
 		return cfg, err
 	}
 
+	// After unmarshal, merge default exclusions with user-provided ones
+	defaults := Default()
+	if len(cfg.Exclude) > 0 {
+		// Merge: keep defaults, add any user patterns not already in defaults
+		merged := make(map[string]bool)
+		for _, e := range defaults.Exclude {
+			merged[e] = true
+		}
+		for _, e := range cfg.Exclude {
+			merged[e] = true
+		}
+		cfg.Exclude = make([]string, 0, len(merged))
+		for e := range merged {
+			cfg.Exclude = append(cfg.Exclude, e)
+		}
+	} else {
+		cfg.Exclude = defaults.Exclude
+	}
+
 	if cfg.Thresholds.Idle == 0 {
 		cfg.Thresholds.Idle = 3
 	}

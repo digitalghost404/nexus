@@ -62,27 +62,35 @@ func CaptureSession(database *db.DB, workDir string, claudeDir string) (*Capture
 	var branch string
 	var dirtyCount int
 	var dirty bool
+	var commitMsg string
+	var commitTime time.Time
 
 	if scanner.IsGitRepo(absDir) {
 		branch, _ = scanner.GetBranch(absDir)
 		dirtyCount, _ = scanner.GetDirtyFileCount(absDir)
 		dirty = dirtyCount > 0
+		commitMsg, commitTime, _ = scanner.GetLastCommit(absDir)
 		commits, _ = scanner.GetCommitsSince(absDir, *startedAt)
 		files, _ = scanner.GetChangedFiles(absDir, *startedAt)
 		languages = scanner.DetectLanguages(absDir)
 	}
 
 	// Ensure project exists in DB with full git health data
-	projectID, err := database.UpsertProject(db.Project{
-		Name:         projectName,
-		Path:         absDir,
-		Branch:       branch,
-		Dirty:        dirty,
-		DirtyFiles:   dirtyCount,
-		Languages:    TagsToJSON(languages),
-		Status:       "active",
-		DiscoveredAt: now,
-	})
+	proj := db.Project{
+		Name:          projectName,
+		Path:          absDir,
+		Branch:        branch,
+		Dirty:         dirty,
+		DirtyFiles:    dirtyCount,
+		LastCommitMsg: commitMsg,
+		Languages:     TagsToJSON(languages),
+		Status:        "active",
+		DiscoveredAt:  now,
+	}
+	if !commitTime.IsZero() {
+		proj.LastCommitAt = &commitTime
+	}
+	projectID, err := database.UpsertProject(proj)
 	if err != nil {
 		return nil, fmt.Errorf("upsert project: %w", err)
 	}
