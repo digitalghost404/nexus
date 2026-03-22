@@ -24,10 +24,31 @@ const fishFunction = `function claude
 end
 `
 
-// detectShell returns "fish", "zsh", or "bash" based on the $SHELL environment variable.
+// detectShell returns "fish", "zsh", or "bash". It checks /etc/passwd for the
+// login shell first (authoritative), then falls back to $SHELL.
 func detectShell() string {
-	shell := os.Getenv("SHELL")
-	base := filepath.Base(shell)
+	// Try /etc/passwd first — $SHELL can be stale or inherited from a
+	// parent process (e.g. set to zsh while login shell is fish).
+	if data, err := os.ReadFile("/etc/passwd"); err == nil {
+		uid := fmt.Sprintf("%d", os.Getuid())
+		for _, line := range strings.Split(string(data), "\n") {
+			parts := strings.Split(line, ":")
+			if len(parts) >= 7 && parts[2] == uid {
+				shell := filepath.Base(parts[6])
+				switch shell {
+				case "fish":
+					return "fish"
+				case "zsh":
+					return "zsh"
+				case "bash":
+					return "bash"
+				}
+			}
+		}
+	}
+
+	// Fallback to $SHELL
+	base := filepath.Base(os.Getenv("SHELL"))
 	switch base {
 	case "fish":
 		return "fish"
