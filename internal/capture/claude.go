@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -77,4 +78,20 @@ func FindLatestSession(claudeDir string, workDir string) (*ClaudeSession, error)
 func DefaultClaudeDir() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".claude")
+}
+
+// FindSessionJSONL locates the JSONL conversation log for a Claude session.
+// Returns the path if found, empty string otherwise.
+func FindSessionJSONL(claudeDir, sessionID, workDir string) string {
+	if sessionID == "" {
+		return ""
+	}
+	// Claude stores JSONL at: ~/.claude/projects/<slug>/<session-id>.jsonl
+	// where <slug> is the workDir path with "/" replaced by "-"
+	slug := strings.ReplaceAll(workDir, "/", "-")
+	jsonlPath := filepath.Join(claudeDir, "projects", slug, sessionID+".jsonl")
+	if _, err := os.Stat(jsonlPath); err == nil {
+		return jsonlPath
+	}
+	return ""
 }

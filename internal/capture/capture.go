@@ -2,6 +2,7 @@
 package capture
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -115,6 +116,18 @@ func CaptureSession(database *db.DB, workDir string, claudeDir string) (*Capture
 	})
 	if err != nil {
 		return nil, fmt.Errorf("insert session: %w", err)
+	}
+
+	// Parse conversation log if available
+	if claudeSessionID != "" {
+		jsonlPath := FindSessionJSONL(claudeDir, claudeSessionID, absDir)
+		if jsonlPath != "" {
+			if digest, err := ParseJSONL(jsonlPath); err == nil && digest != nil {
+				if digestJSON, err := json.Marshal(digest); err == nil {
+					_ = database.InsertConversationDigest(sessionID, string(digestJSON))
+				}
+			}
+		}
 	}
 
 	return &CaptureResult{
