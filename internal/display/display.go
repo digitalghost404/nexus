@@ -260,7 +260,7 @@ func truncate(s string, max int) string {
 	return string(runes[:max-3]) + "..."
 }
 
-func FormatResume(w io.Writer, s *db.Session, dirtyFiles []string) {
+func FormatResume(w io.Writer, s *db.Session, dirtyFiles []string, digestJSON string) {
 	fmt.Fprintf(w, "\n┌ RESUME: %s ────────────────────────────\n│\n", s.ProjectName)
 
 	if s.StartedAt != nil {
@@ -291,6 +291,11 @@ func FormatResume(w io.Writer, s *db.Session, dirtyFiles []string) {
 	json.Unmarshal([]byte(s.FilesChanged), &files) //nolint:errcheck
 	if len(files) > 0 {
 		fmt.Fprintf(w, "│\n│  Files changed:\n│    %s\n", strings.Join(files, ", "))
+	}
+
+	if digestJSON != "" {
+		fmt.Fprintf(w, "│\n│  Conversation:\n")
+		FormatConversationDigest(w, digestJSON, "│    ")
 	}
 
 	// Dirty files from live git status
@@ -421,7 +426,71 @@ func FormatWhere(w io.Writer, results []WhereResult) {
 	}
 }
 
-func FormatContext(w io.Writer, p *db.Project, sessions []db.Session, notes []db.Note, linkedProjects []db.Project) {
+func FormatConversationDigest(w io.Writer, digestJSON string, prefix string) {
+	if digestJSON == "" {
+		return
+	}
+
+	type digest struct {
+		Messages []struct {
+			Role string `json:"role"`
+			Text string `json:"text"`
+		} `json:"messages"`
+		ToolCalls []struct {
+			Tool    string `json:"tool"`
+			Target  string `json:"target"`
+			Command string `json:"command,omitempty"`
+			Outcome string `json:"outcome"`
+		} `json:"tool_calls"`
+		Errors       []string `json:"errors"`
+		FilesTouched []string `json:"files_touched"`
+	}
+
+	var d digest
+	if err := json.Unmarshal([]byte(digestJSON), &d); err != nil {
+		return
+	}
+
+	// User questions
+	var questions []string
+	for _, m := range d.Messages {
+		if m.Role == "user" && len(m.Text) > 0 {
+			questions = append(questions, truncate(m.Text, 80))
+		}
+	}
+	if len(questions) > 0 {
+		fmt.Fprintf(w, "%sDiscussed:\n", prefix)
+		for _, q := range questions {
+			fmt.Fprintf(w, "%s  - \"%s\"\n", prefix, q)
+		}
+	}
+
+	// Files
+	if len(d.FilesTouched) > 0 {
+		fmt.Fprintf(w, "%sFiles: %s\n", prefix, strings.Join(d.FilesTouched, ", "))
+	}
+
+	// Commands
+	var cmds []string
+	for _, tc := range d.ToolCalls {
+		if tc.Tool == "Bash" && tc.Command != "" {
+			cmds = append(cmds, fmt.Sprintf("%s (%s)", truncate(tc.Command, 60), tc.Outcome))
+		}
+	}
+	if len(cmds) > 0 {
+		fmt.Fprintf(w, "%sCommands: %s\n", prefix, strings.Join(cmds, "; "))
+	}
+
+	// Errors
+	if len(d.Errors) > 0 {
+		fmt.Fprintf(w, "%sErrors:\n", prefix)
+		for _, e := range d.Errors {
+			fmt.Fprintf(w, "%s  - %s\n", prefix, truncate(e, 80))
+		}
+	}
+}
+
+func FormatContext(w io.Writer, p *db.Project, sessions []db.Session, notes []db.Note, linkedProjects []db.Project, digests map[int64]string) {
 	fmt.Fprintf(w, "## Project: %s\n", p.Name)
 	fmt.Fprintf(w, "Path: %s\n", p.Path)
 
@@ -447,6 +516,9 @@ func FormatContext(w io.Writer, p *db.Project, sessions []db.Session, notes []db
 			var commits []struct{ Hash, Message string }
 			json.Unmarshal([]byte(s.CommitsMade), &commits) //nolint:errcheck
 			fmt.Fprintf(w, "- %s: \"%s\" (%d commits)\n", dateStr, s.Summary, len(commits))
+			if digestJSON, ok := digests[s.ID]; ok {
+				FormatConversationDigest(w, digestJSON, "  ")
+			}
 		}
 	}
 

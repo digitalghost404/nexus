@@ -2,10 +2,12 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/digitalghost404/nexus/internal/capture"
 	"github.com/digitalghost404/nexus/internal/config"
 	"github.com/digitalghost404/nexus/internal/db"
 	"github.com/digitalghost404/nexus/internal/display"
@@ -49,6 +51,20 @@ var resumeCmd = &cobra.Command{
 			return nil
 		}
 
+		digestJSON, _ := database.GetConversationDigest(session.ID)
+		if digestJSON == "" && session.ClaudeSessionID != "" {
+			claudeDir := capture.DefaultClaudeDir()
+			jsonlPath := capture.FindSessionJSONL(claudeDir, session.ClaudeSessionID, project.Path)
+			if jsonlPath != "" {
+				if parsed, err := capture.ParseJSONL(jsonlPath); err == nil && parsed != nil {
+					if dj, err := json.Marshal(parsed); err == nil {
+						digestJSON = string(dj)
+						_ = database.InsertConversationDigest(session.ID, digestJSON)
+					}
+				}
+			}
+		}
+
 		// Get live dirty files
 		var dirtyFiles []string
 		if scanner.IsGitRepo(project.Path) {
@@ -58,7 +74,7 @@ var resumeCmd = &cobra.Command{
 			}
 		}
 
-		display.FormatResume(os.Stdout, session, dirtyFiles)
+		display.FormatResume(os.Stdout, session, dirtyFiles, digestJSON)
 		return nil
 	},
 }

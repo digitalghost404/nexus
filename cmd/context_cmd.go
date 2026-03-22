@@ -2,10 +2,12 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
 
+	"github.com/digitalghost404/nexus/internal/capture"
 	"github.com/digitalghost404/nexus/internal/config"
 	"github.com/digitalghost404/nexus/internal/db"
 	"github.com/digitalghost404/nexus/internal/display"
@@ -41,7 +43,26 @@ var contextCmd = &cobra.Command{
 		// Try to query project_links; if table doesn't exist, just skip
 		linkedProjects, _ = database.GetLinkedProjects(p.ID)
 
-		display.FormatContext(os.Stdout, p, sessions, notes, linkedProjects)
+		digests := make(map[int64]string)
+		for _, s := range sessions {
+			if d, err := database.GetConversationDigest(s.ID); err == nil && d != "" {
+				digests[s.ID] = d
+			} else if s.ClaudeSessionID != "" {
+				claudeDir := capture.DefaultClaudeDir()
+				jsonlPath := capture.FindSessionJSONL(claudeDir, s.ClaudeSessionID, p.Path)
+				if jsonlPath != "" {
+					if parsed, err := capture.ParseJSONL(jsonlPath); err == nil && parsed != nil {
+						if digestJSON, err := json.Marshal(parsed); err == nil {
+							digestStr := string(digestJSON)
+							_ = database.InsertConversationDigest(s.ID, digestStr)
+							digests[s.ID] = digestStr
+						}
+					}
+				}
+			}
+		}
+
+		display.FormatContext(os.Stdout, p, sessions, notes, linkedProjects, digests)
 		return nil
 	},
 }

@@ -70,7 +70,7 @@ func TestFormatResume(t *testing.T) {
 	}
 	dirtyFiles := []string{"M internal/test.go", "?? new.txt"}
 
-	FormatResume(&buf, &s, dirtyFiles)
+	FormatResume(&buf, &s, dirtyFiles, "")
 	output := buf.String()
 
 	if !strings.Contains(output, "RESUME") {
