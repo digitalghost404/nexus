@@ -19,7 +19,6 @@ coverage.txt
 Thumbs.db
 
 # Claude Code
-CLAUDE.md
 .claude/
 
 # Nexus data (local)
