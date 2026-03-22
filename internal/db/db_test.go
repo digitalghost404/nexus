@@ -75,8 +75,8 @@ func TestSchemaVersion(t *testing.T) {
 
 	var version int
 	d.db.QueryRow("PRAGMA user_version").Scan(&version)
-	if version != 2 {
-		t.Errorf("expected user_version=2, got: %d", version)
+	if version != 3 {
+		t.Errorf("expected user_version=3, got: %d", version)
 	}
 }
 
@@ -112,11 +112,17 @@ func TestMigrationV1ToV2(t *testing.T) {
 		t.Fatalf("session_tags table missing: %v", err)
 	}
 
-	// Verify version is now 2
+	// Verify v3 table exists
+	err = d.db.QueryRow("SELECT count(*) FROM session_conversations").Scan(&count)
+	if err != nil {
+		t.Fatalf("session_conversations table missing: %v", err)
+	}
+
+	// Verify version is now 3 (v1 migrates through v2 and then v3)
 	var version int
 	d.db.QueryRow("PRAGMA user_version").Scan(&version)
-	if version != 2 {
-		t.Errorf("expected user_version=2, got %d", version)
+	if version != 3 {
+		t.Errorf("expected user_version=3, got %d", version)
 	}
 
 	// Verify existing data survived

@@ -16,6 +16,9 @@ var schemaSQL string
 //go:embed migration_v2.sql
 var migrationV2SQL string
 
+//go:embed migration_v3.sql
+var migrationV3SQL string
+
 type DB struct {
 	db *sql.DB
 }
@@ -51,7 +54,7 @@ func (d *DB) migrate() error {
 		return fmt.Errorf("read schema version: %w", err)
 	}
 
-	const currentVersion = 2
+	const currentVersion = 3
 	if version > currentVersion {
 		return fmt.Errorf("database schema version %d is newer than supported version %d — upgrade nexus", version, currentVersion)
 	}
@@ -60,7 +63,7 @@ func (d *DB) migrate() error {
 		if _, err := d.db.Exec(schemaSQL); err != nil {
 			return fmt.Errorf("apply schema: %w", err)
 		}
-		if _, err := d.db.Exec("PRAGMA user_version = 2"); err != nil {
+		if _, err := d.db.Exec("PRAGMA user_version = 3"); err != nil {
 			return fmt.Errorf("set version: %w", err)
 		}
 	}
@@ -70,6 +73,16 @@ func (d *DB) migrate() error {
 			return fmt.Errorf("apply v2 migration: %w", err)
 		}
 		if _, err := d.db.Exec("PRAGMA user_version = 2"); err != nil {
+			return fmt.Errorf("set version: %w", err)
+		}
+		version = 2
+	}
+
+	if version == 2 {
+		if _, err := d.db.Exec(migrationV3SQL); err != nil {
+			return fmt.Errorf("apply v3 migration: %w", err)
+		}
+		if _, err := d.db.Exec("PRAGMA user_version = 3"); err != nil {
 			return fmt.Errorf("set version: %w", err)
 		}
 	}

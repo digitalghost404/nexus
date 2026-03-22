@@ -100,3 +100,10 @@ CREATE TABLE IF NOT EXISTS session_tags (
 );
 
 CREATE INDEX IF NOT EXISTS idx_session_tags_tag ON session_tags(tag);
+
+-- v3 tables
+CREATE TABLE IF NOT EXISTS session_conversations (
+    session_id INTEGER PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
+    digest     TEXT NOT NULL,
+    parsed_at  DATETIME NOT NULL DEFAULT (datetime('now'))
+);
