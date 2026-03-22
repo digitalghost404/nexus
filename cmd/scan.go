@@ -139,8 +139,15 @@ func runScan(cfg config.Config, verbose bool) error {
 			continue
 		}
 
+		// Derive time window from actual commits
+		earliest := commits[len(commits)-1].Time // git log returns newest first
+		latest := commits[0].Time
+		// Add a small buffer so the session window covers the commits
+		sessionStart := earliest.Add(-1 * time.Minute)
+		sessionEnd := latest.Add(1 * time.Minute)
+
 		// Check if any existing session covers this time range
-		hasOverlap, _ := database.HasOverlappingSession(proj.ID, since, now)
+		hasOverlap, _ := database.HasOverlappingSession(proj.ID, sessionStart, sessionEnd)
 		if hasOverlap {
 			continue
 		}
@@ -153,9 +160,9 @@ func runScan(cfg config.Config, verbose bool) error {
 
 		if _, err := database.InsertSession(db.Session{
 			ProjectID:    proj.ID,
-			StartedAt:    &since,
-			EndedAt:      &now,
-			DurationSecs: int(now.Sub(since).Seconds()),
+			StartedAt:    &sessionStart,
+			EndedAt:      &sessionEnd,
+			DurationSecs: int(sessionEnd.Sub(sessionStart).Seconds()),
 			Summary:      summary,
 			FilesChanged: capture.FilesToJSON(files),
 			CommitsMade:  capture.CommitsToJSON(commits),
