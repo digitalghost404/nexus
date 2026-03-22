@@ -81,17 +81,40 @@ func DefaultClaudeDir() string {
 }
 
 // FindSessionJSONL locates the JSONL conversation log for a Claude session.
+// It first checks the exact project slug, then searches all project directories
+// since sessions started from a parent directory (e.g. $HOME) store their JSONL
+// under a different slug than the project path.
 // Returns the path if found, empty string otherwise.
 func FindSessionJSONL(claudeDir, sessionID, workDir string) string {
 	if sessionID == "" {
 		return ""
 	}
-	// Claude stores JSONL at: ~/.claude/projects/<slug>/<session-id>.jsonl
-	// where <slug> is the workDir path with "/" replaced by "-"
+
+	fileName := sessionID + ".jsonl"
+	projectsDir := filepath.Join(claudeDir, "projects")
+
+	// Try exact project slug first (fast path).
 	slug := strings.ReplaceAll(workDir, "/", "-")
-	jsonlPath := filepath.Join(claudeDir, "projects", slug, sessionID+".jsonl")
+	jsonlPath := filepath.Join(projectsDir, slug, fileName)
 	if _, err := os.Stat(jsonlPath); err == nil {
 		return jsonlPath
 	}
+
+	// Search all project directories for this session ID.
+	// Session IDs are UUIDs so collisions aren't a concern.
+	entries, err := os.ReadDir(projectsDir)
+	if err != nil {
+		return ""
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		candidate := filepath.Join(projectsDir, entry.Name(), fileName)
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+
 	return ""
 }
