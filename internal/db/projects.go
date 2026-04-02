@@ -4,7 +4,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"time"
 )
 
 type Project struct {
@@ -15,13 +14,13 @@ type Project struct {
 	Branch        string
 	Dirty         bool
 	DirtyFiles    int
-	LastCommitAt  *time.Time
+	LastCommitAt  NullTime
 	LastCommitMsg string
 	Ahead         int
 	Behind        int
 	Status        string
-	DiscoveredAt  time.Time
-	LastScannedAt *time.Time
+	DiscoveredAt  NullTime
+	LastScannedAt NullTime
 }
 
 func (d *DB) UpsertProject(p Project) (int64, error) {

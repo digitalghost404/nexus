@@ -19,6 +19,9 @@ var migrationV2SQL string
 //go:embed migration_v3.sql
 var migrationV3SQL string
 
+//go:embed migration_v4.sql
+var migrationV4SQL string
+
 type DB struct {
 	db *sql.DB
 }
@@ -54,7 +57,7 @@ func (d *DB) migrate() error {
 		return fmt.Errorf("read schema version: %w", err)
 	}
 
-	const currentVersion = 3
+	const currentVersion = 4
 	if version > currentVersion {
 		return fmt.Errorf("database schema version %d is newer than supported version %d — upgrade nexus", version, currentVersion)
 	}
@@ -83,6 +86,16 @@ func (d *DB) migrate() error {
 			return fmt.Errorf("apply v3 migration: %w", err)
 		}
 		if _, err := d.db.Exec("PRAGMA user_version = 3"); err != nil {
+			return fmt.Errorf("set version: %w", err)
+		}
+		version = 3
+	}
+
+	if version == 3 {
+		if _, err := d.db.Exec(migrationV4SQL); err != nil {
+			return fmt.Errorf("apply v4 migration: %w", err)
+		}
+		if _, err := d.db.Exec("PRAGMA user_version = 4"); err != nil {
 			return fmt.Errorf("set version: %w", err)
 		}
 	}

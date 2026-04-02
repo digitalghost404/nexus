@@ -128,8 +128,8 @@ func FormatProjectTable(w io.Writer, projects []db.Project) {
 			dirtyStr = fmt.Sprintf("%d", p.DirtyFiles)
 		}
 		commitTime := ""
-		if p.LastCommitAt != nil {
-			commitTime = RelativeTime(*p.LastCommitAt)
+		if p.LastCommitAt.Valid {
+			commitTime = RelativeTime(p.LastCommitAt.Time)
 		}
 		fmt.Fprintf(w, "%-16s %-12s %-8s %-6s %s\n",
 			truncate(p.Name, 15), truncate(p.Branch, 11), p.Status, dirtyStr, commitTime)
@@ -172,8 +172,8 @@ func FormatProjectDetail(w io.Writer, p *db.Project, sessions []db.Session, stal
 		fmt.Fprintf(w, "│  Dirty:     %d file(s)\n", p.DirtyFiles)
 	}
 
-	if p.LastCommitAt != nil {
-		fmt.Fprintf(w, "│  Commit:    %s (%s)\n", RelativeTime(*p.LastCommitAt), p.LastCommitMsg)
+	if p.LastCommitAt.Valid {
+		fmt.Fprintf(w, "│  Commit:    %s (%s)\n", RelativeTime(p.LastCommitAt.Time), p.LastCommitMsg)
 	}
 
 	if p.Ahead > 0 || p.Behind > 0 {

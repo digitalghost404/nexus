@@ -89,10 +89,10 @@ func CaptureSession(database *db.DB, workDir string, claudeDir string) (*Capture
 		LastCommitMsg: commitMsg,
 		Languages:     TagsToJSON(languages),
 		Status:        "active",
-		DiscoveredAt:  now,
+		DiscoveredAt:  db.ToNullTime(&now),
 	}
 	if !commitTime.IsZero() {
-		proj.LastCommitAt = &commitTime
+		proj.LastCommitAt = db.ToNullTime(&commitTime)
 	}
 	projectID, err := database.UpsertProject(proj)
 	if err != nil {

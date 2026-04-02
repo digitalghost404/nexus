@@ -8,13 +8,13 @@ CREATE TABLE IF NOT EXISTS projects (
     branch          TEXT,
     dirty           INTEGER DEFAULT 0,
     dirty_files     INTEGER DEFAULT 0,
-    last_commit_at  DATETIME,
+    last_commit_at  TEXT,
     last_commit_msg TEXT,
     ahead           INTEGER DEFAULT 0,
     behind          INTEGER DEFAULT 0,
     status          TEXT NOT NULL DEFAULT 'active',
-    discovered_at   DATETIME NOT NULL,
-    last_scanned_at DATETIME
+    discovered_at   TEXT NOT NULL,
+    last_scanned_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
