@@ -1,0 +1,7 @@
+vendor/
+*.exe
+*.test
+*.out
+*.log
+coverage.out
+.env.local
