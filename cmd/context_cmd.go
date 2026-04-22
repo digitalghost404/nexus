@@ -75,7 +75,10 @@ var contextCmd = &cobra.Command{
 
 func runInjectContext(database *db.DB, p *db.Project, cmd *cobra.Command) error {
 	since := time.Now().AddDate(0, 0, -7)
-	sessions, _ := database.GetSessionsInRange(p.ID, since, time.Now())
+	sessions, err := database.GetSessionsInRange(p.ID, since, time.Now())
+	if err != nil {
+		return fmt.Errorf("get sessions: %w", err)
+	}
 
 	ollamaAvailable := true
 	var recallResults []context.RecallResult
@@ -121,7 +124,10 @@ func runInjectContext(database *db.DB, p *db.Project, cmd *cobra.Command) error 
 	var projectID *int64
 	pid := p.ID
 	projectID = &pid
-	prefs, _ := database.ListPreferencesByProject(projectID)
+	prefs, err := database.ListPreferencesByProject(projectID)
+	if err != nil {
+		return fmt.Errorf("list preferences: %w", err)
+	}
 
 	opts := context.ContextOptions{
 		Project:        p,

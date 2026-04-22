@@ -20,7 +20,6 @@ var recallCmd = &cobra.Command{
 		query := args[0]
 		limit, _ := cmd.Flags().GetInt("limit")
 		types, _ := cmd.Flags().GetStringSlice("types")
-		project, _ := cmd.Flags().GetString("project")
 
 		database, err := db.Open(cfg.DBPath())
 		if err != nil {
@@ -32,7 +31,7 @@ var recallCmd = &cobra.Command{
 
 		vec, err := client.Embed(cmd.Context(), query)
 		if err != nil {
-			return recallFallback(database, query, limit, types, project)
+			return recallFallback(database, query, limit, types)
 		}
 
 		type scoredResult struct {
@@ -100,7 +99,7 @@ var recallCmd = &cobra.Command{
 	},
 }
 
-func recallFallback(database *db.DB, query string, limit int, types []string, project string) error {
+func recallFallback(database *db.DB, query string, limit int, types []string) error {
 	fmt.Println("[semantic search unavailable, using keyword matching]")
 
 	var results []context.RecallResult
@@ -169,6 +168,5 @@ func init() {
 	recallCmd.GroupID = "query"
 	recallCmd.Flags().Int("limit", 5, "Maximum results")
 	recallCmd.Flags().StringSlice("types", []string{"session", "note", "preference"}, "Result types")
-	recallCmd.Flags().StringP("project", "p", "", "Project scope")
 	rootCmd.AddCommand(recallCmd)
 }

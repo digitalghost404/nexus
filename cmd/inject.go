@@ -35,7 +35,10 @@ var injectCmd = &cobra.Command{
 		}
 
 		since := time.Now().AddDate(0, 0, -7)
-		sessions, _ := database.GetSessionsInRange(p.ID, since, time.Now())
+		sessions, err := database.GetSessionsInRange(p.ID, since, time.Now())
+		if err != nil {
+			return fmt.Errorf("get sessions: %w", err)
+		}
 
 		ollamaAvailable := true
 		var recallResults []context.RecallResult
@@ -84,7 +87,10 @@ var injectCmd = &cobra.Command{
 		var projectID *int64
 		pid := p.ID
 		projectID = &pid
-		prefs, _ := database.ListPreferencesByProject(projectID)
+		prefs, err := database.ListPreferencesByProject(projectID)
+		if err != nil {
+			return fmt.Errorf("list preferences: %w", err)
+		}
 
 		opts := context.ContextOptions{
 			Project:         p,
