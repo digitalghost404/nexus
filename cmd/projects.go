@@ -4,7 +4,6 @@ package cmd
 import (
 	"os"
 
-	"github.com/digitalghost404/nexus/internal/config"
 	"github.com/digitalghost404/nexus/internal/db"
 	"github.com/digitalghost404/nexus/internal/display"
 	"github.com/spf13/cobra"
@@ -20,7 +19,7 @@ var projectsCmd = &cobra.Command{
 	Use:   "projects",
 	Short: "List all tracked projects with health status",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		database, err := db.Open(config.DBPath())
+		database, err := db.Open(cfg.DBPath())
 		if err != nil {
 			return err
 		}

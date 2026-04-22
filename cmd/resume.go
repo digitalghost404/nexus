@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/digitalghost404/nexus/internal/capture"
-	"github.com/digitalghost404/nexus/internal/config"
 	"github.com/digitalghost404/nexus/internal/db"
 	"github.com/digitalghost404/nexus/internal/display"
 	"github.com/digitalghost404/nexus/internal/scanner"
@@ -20,7 +19,7 @@ var resumeCmd = &cobra.Command{
 	Short: "Pick up where you left off on a project",
 	Long:  "Shows the last Claude session for a project with commits, files changed, and current uncommitted changes.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		database, err := db.Open(config.DBPath())
+		database, err := db.Open(cfg.DBPath())
 		if err != nil {
 			return err
 		}

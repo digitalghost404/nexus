@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/digitalghost404/nexus/internal/config"
 	"github.com/digitalghost404/nexus/internal/db"
 	"github.com/digitalghost404/nexus/internal/display"
 	"github.com/spf13/cobra"
@@ -22,7 +21,7 @@ var depsCmd = &cobra.Command{
 	Short: "Check for outdated dependencies",
 	Long:  "Scans all tracked projects for outdated Go, npm, and pip dependencies.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		database, err := db.Open(config.DBPath())
+		database, err := db.Open(cfg.DBPath())
 		if err != nil {
 			return err
 		}

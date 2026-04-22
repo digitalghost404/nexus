@@ -17,7 +17,9 @@ var Version = "0.2.0"
 
 var (
 	debug bool
+	agent string
 	log   *logger.Logger
+	cfg   config.Config
 )
 
 var rootCmd = &cobra.Command{
@@ -36,7 +38,7 @@ var rootCmd = &cobra.Command{
 				}
 			}
 			// Not a subcommand — try as project name
-			database, err := db.Open(config.DBPath())
+			database, err := db.Open(cfg.DBPath())
 			if err != nil {
 				return fmt.Errorf("open db: %w", err)
 			}
@@ -55,7 +57,7 @@ var rootCmd = &cobra.Command{
 }
 
 func smartSummary() error {
-	database, err := db.Open(config.DBPath())
+	database, err := db.Open(cfg.DBPath())
 	if err != nil {
 		fmt.Println("Nexus not initialized. Run 'nexus init' to get started.")
 		return nil
@@ -90,11 +92,14 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug output to stderr")
+	rootCmd.PersistentFlags().StringVarP(&agent, "agent", "a", "claude", "AI agent name (claude, opencode)")
 
 	cobra.OnInitialize(func() {
+		cfg = config.Default()
+		cfg.Agent = agent
 		log = logger.New(logger.Config{
 			Debug:   debug,
-			LogFile: config.LogPath(),
+			LogFile: cfg.LogPath(),
 		})
 	})
 

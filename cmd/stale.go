@@ -8,7 +8,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/digitalghost404/nexus/internal/config"
 	"github.com/digitalghost404/nexus/internal/db"
 	"github.com/digitalghost404/nexus/internal/display"
 	"github.com/digitalghost404/nexus/internal/scanner"
@@ -22,7 +21,7 @@ var staleCmd = &cobra.Command{
 	Short: "Show stale branches and idle projects",
 	Long:  "Lists stale branches and dirty projects. Use --cleanup for interactive branch deletion.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		database, err := db.Open(config.DBPath())
+		database, err := db.Open(cfg.DBPath())
 		if err != nil {
 			return err
 		}

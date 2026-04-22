@@ -18,7 +18,7 @@ var configShowCmd = &cobra.Command{
 	Use:   "show",
 	Short: "Show current configuration",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := config.Load(config.ConfigPath())
+		cfg, err := config.Load(cfg.ConfigPath())
 		if err != nil {
 			return err
 		}
@@ -38,22 +38,22 @@ var configRootsAddCmd = &cobra.Command{
 	Short: "Add a scan root",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfgPath := config.ConfigPath()
-		cfg, err := config.Load(cfgPath)
+		cfgPath := cfg.ConfigPath()
+		loadedCfg, err := config.Load(cfgPath)
 		if err != nil {
 			return err
 		}
 
 		expanded := config.ExpandPath(args[0])
-		for _, r := range cfg.Roots {
+		for _, r := range loadedCfg.Roots {
 			if r == expanded {
 				fmt.Printf("Root already exists: %s\n", expanded)
 				return nil
 			}
 		}
 
-		cfg.Roots = append(cfg.Roots, expanded)
-		if err := config.Save(cfgPath, cfg); err != nil {
+		loadedCfg.Roots = append(loadedCfg.Roots, expanded)
+		if err := config.Save(cfgPath, loadedCfg); err != nil {
 			return err
 		}
 		fmt.Printf("Added root: %s\n", expanded)
@@ -71,14 +71,14 @@ var configExcludeAddCmd = &cobra.Command{
 	Short: "Add an exclusion pattern",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfgPath := config.ConfigPath()
-		cfg, err := config.Load(cfgPath)
+		cfgPath := cfg.ConfigPath()
+		loadedCfg, err := config.Load(cfgPath)
 		if err != nil {
 			return err
 		}
 
-		cfg.Exclude = append(cfg.Exclude, args[0])
-		if err := config.Save(cfgPath, cfg); err != nil {
+		loadedCfg.Exclude = append(loadedCfg.Exclude, args[0])
+		if err := config.Save(cfgPath, loadedCfg); err != nil {
 			return err
 		}
 		fmt.Printf("Added exclusion: %s\n", args[0])

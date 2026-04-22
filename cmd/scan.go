@@ -21,7 +21,7 @@ var scanCmd = &cobra.Command{
 	Use:   "scan",
 	Short: "Scan roots for projects and update health data",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := config.Load(config.ConfigPath())
+		cfg, err := config.Load(cfg.ConfigPath())
 		if err != nil {
 			return err
 		}
@@ -30,7 +30,7 @@ var scanCmd = &cobra.Command{
 }
 
 func runScan(cfg config.Config, verbose bool) error {
-	database, err := db.Open(config.DBPath())
+	database, err := db.Open(cfg.DBPath())
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}

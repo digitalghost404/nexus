@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/digitalghost404/nexus/internal/config"
 	"github.com/digitalghost404/nexus/internal/db"
 	"github.com/digitalghost404/nexus/internal/display"
 	"github.com/spf13/cobra"
@@ -20,7 +19,7 @@ var diffCmd = &cobra.Command{
 	Short: "Summarize changes across sessions in a time window",
 	Long:  "Aggregates activity across all sessions for a project within a time range, showing commits, files, and a timeline.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		database, err := db.Open(config.DBPath())
+		database, err := db.Open(cfg.DBPath())
 		if err != nil {
 			return err
 		}

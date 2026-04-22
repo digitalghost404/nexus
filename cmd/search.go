@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/digitalghost404/nexus/internal/config"
 	"github.com/digitalghost404/nexus/internal/db"
 	"github.com/digitalghost404/nexus/internal/display"
 	"github.com/spf13/cobra"
@@ -22,7 +21,7 @@ var searchCmd = &cobra.Command{
 	Short: "Search sessions and notes by keyword",
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		database, err := db.Open(config.DBPath())
+		database, err := db.Open(cfg.DBPath())
 		if err != nil {
 			return err
 		}

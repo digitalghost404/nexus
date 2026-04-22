@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/digitalghost404/nexus/internal/config"
 	"github.com/digitalghost404/nexus/internal/db"
 	"github.com/digitalghost404/nexus/internal/display"
 	"github.com/spf13/cobra"
@@ -18,7 +17,7 @@ var whereCmd = &cobra.Command{
 	Long:  "Searches session summaries and file paths, then groups results by project and file.",
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		database, err := db.Open(config.DBPath())
+		database, err := db.Open(cfg.DBPath())
 		if err != nil {
 			return err
 		}

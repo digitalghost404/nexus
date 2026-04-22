@@ -27,6 +27,8 @@ type DB struct {
 }
 
 func Open(path string) (*DB, error) {
+	migrateLegacyData(path)
+
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return nil, fmt.Errorf("create db dir: %w", err)
 	}
@@ -109,4 +111,45 @@ func (d *DB) Close() error {
 
 func (d *DB) Conn() *sql.DB {
 	return d.db
+}
+
+func migrateLegacyData(newPath string) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+	legacyDir := filepath.Join(home, ".nexus")
+	legacyDB := filepath.Join(legacyDir, "nexus.db")
+	legacyCfg := filepath.Join(legacyDir, "config.yaml")
+	legacyLog := filepath.Join(legacyDir, "nexus.log")
+
+	newDir := filepath.Dir(newPath)
+
+	legacyExists := fileExists(legacyDB) || fileExists(legacyCfg) || fileExists(legacyLog)
+	if !legacyExists {
+		return
+	}
+	if fileExists(newPath) || fileExists(filepath.Join(newDir, "config.yaml")) || fileExists(filepath.Join(newDir, "nexus.log")) {
+		return
+	}
+
+	if err := os.MkdirAll(newDir, 0700); err != nil {
+		return
+	}
+
+	moveFile(legacyDB, filepath.Join(newDir, "nexus.db"))
+	moveFile(legacyCfg, filepath.Join(newDir, "config.yaml"))
+	moveFile(legacyLog, filepath.Join(newDir, "nexus.log"))
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+func moveFile(src, dst string) error {
+	if !fileExists(src) {
+		return nil
+	}
+	return os.Rename(src, dst)
 }

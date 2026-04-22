@@ -69,3 +69,45 @@ func TestExpandTilde(t *testing.T) {
 		t.Errorf("expected %s, got %s", expected, result)
 	}
 }
+
+func TestNexusDirDefault(t *testing.T) {
+	cfg := Default()
+	expected := filepath.Join(os.Getenv("HOME"), ".nexus", "claude")
+	if cfg.NexusDir() != expected {
+		t.Errorf("expected %s, got %s", expected, cfg.NexusDir())
+	}
+}
+
+func TestNexusDirAgentOpencode(t *testing.T) {
+	cfg := Default()
+	cfg.Agent = "opencode"
+	expected := filepath.Join(os.Getenv("HOME"), ".nexus", "opencode")
+	if cfg.NexusDir() != expected {
+		t.Errorf("expected %s, got %s", expected, cfg.NexusDir())
+	}
+}
+
+func TestDBPathAgentIsolation(t *testing.T) {
+	cfg := Default()
+	cfg.Agent = "opencode"
+	expected := filepath.Join(os.Getenv("HOME"), ".nexus", "opencode", "nexus.db")
+	if cfg.DBPath() != expected {
+		t.Errorf("expected %s, got %s", expected, cfg.DBPath())
+	}
+}
+
+func TestConfigPathAgentIsolation(t *testing.T) {
+	cfg := Default()
+	cfg.Agent = "opencode"
+	expected := filepath.Join(os.Getenv("HOME"), ".nexus", "opencode", "config.yaml")
+	if cfg.ConfigPath() != expected {
+		t.Errorf("expected %s, got %s", expected, cfg.ConfigPath())
+	}
+}
+
+func TestDefaultAgentIsClaude(t *testing.T) {
+	cfg := Default()
+	if cfg.Agent != "claude" {
+		t.Errorf("expected default agent 'claude', got %s", cfg.Agent)
+	}
+}

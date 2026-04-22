@@ -14,7 +14,7 @@ var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize Nexus (~/.nexus/ setup, first scan)",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		nexusDir := config.NexusDir()
+		nexusDir := cfg.NexusDir()
 
 		// Create directory
 		if err := os.MkdirAll(nexusDir, 0700); err != nil {
@@ -23,19 +23,19 @@ var initCmd = &cobra.Command{
 		fmt.Printf("Created %s\n", nexusDir)
 
 		// Create database
-		database, err := db.Open(config.DBPath())
+		database, err := db.Open(cfg.DBPath())
 		if err != nil {
 			return fmt.Errorf("init db: %w", err)
 		}
 		database.Close()
-		fmt.Printf("Created database at %s\n", config.DBPath())
+		fmt.Printf("Created database at %s\n", cfg.DBPath())
 
 		// Create default config if missing
-		cfgPath := config.ConfigPath()
+		cfgPath := cfg.ConfigPath()
 		if _, err := os.Stat(cfgPath); os.IsNotExist(err) {
-			cfg := config.Default()
-			cfg.Roots = []string{}
-			if err := config.Save(cfgPath, cfg); err != nil {
+			defaultCfg := config.Default()
+			defaultCfg.Roots = []string{}
+			if err := config.Save(cfgPath, defaultCfg); err != nil {
 				return fmt.Errorf("save config: %w", err)
 			}
 			fmt.Printf("Created config at %s\n", cfgPath)
@@ -51,16 +51,16 @@ var initCmd = &cobra.Command{
 		fmt.Println("Then run: source ~/.bashrc")
 
 		// Print cron instructions
-		cfg, _ := config.Load(cfgPath)
+		loadedCfg, _ := config.Load(cfgPath)
 		fmt.Println("\n── Periodic Scan ─────────────────────────────")
-		fmt.Printf("Add this cron job to run scans every %s:\n\n", cfg.ScanInterval)
+		fmt.Printf("Add this cron job to run scans every %s:\n\n", loadedCfg.ScanInterval)
 		fmt.Printf("  %s %s/go/bin/nexus scan >> %s/nexus.log 2>&1\n",
-			cronExpr(cfg.ScanInterval), os.Getenv("HOME"), nexusDir)
+			cronExpr(loadedCfg.ScanInterval), os.Getenv("HOME"), nexusDir)
 		fmt.Println()
 
 		// Run initial scan
 		fmt.Println("Running initial scan...")
-		return runScan(cfg, false)
+		return runScan(loadedCfg, false)
 	},
 }
 

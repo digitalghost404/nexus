@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/digitalghost404/nexus/internal/config"
 	"github.com/digitalghost404/nexus/internal/db"
 	"github.com/digitalghost404/nexus/internal/display"
 	"github.com/digitalghost404/nexus/internal/scanner"
@@ -18,7 +17,7 @@ var showCmd = &cobra.Command{
 	Short: "Show detailed info for a specific project",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		database, err := db.Open(config.DBPath())
+		database, err := db.Open(cfg.DBPath())
 		if err != nil {
 			return err
 		}

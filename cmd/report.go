@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/digitalghost404/nexus/internal/config"
 	"github.com/digitalghost404/nexus/internal/db"
 	"github.com/digitalghost404/nexus/internal/display"
 	"github.com/spf13/cobra"
@@ -22,7 +21,7 @@ var reportCmd = &cobra.Command{
 	Short: "Generate activity summary for a time period",
 	Long:  "Shows sessions, commits, files changed, most active projects, and language breakdown.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		database, err := db.Open(config.DBPath())
+		database, err := db.Open(cfg.DBPath())
 		if err != nil {
 			return err
 		}

@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/digitalghost404/nexus/internal/config"
 	"github.com/digitalghost404/nexus/internal/db"
 	"github.com/digitalghost404/nexus/internal/display"
 	"github.com/spf13/cobra"
@@ -17,7 +16,7 @@ var streakCmd = &cobra.Command{
 	Short: "Show your coding streak",
 	Long:  "Shows consecutive days with Claude sessions, plus weekly activity bars.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		database, err := db.Open(config.DBPath())
+		database, err := db.Open(cfg.DBPath())
 		if err != nil {
 			return err
 		}

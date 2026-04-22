@@ -11,7 +11,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/digitalghost404/nexus/internal/config"
 	"github.com/digitalghost404/nexus/internal/db"
 	"github.com/digitalghost404/nexus/internal/display"
 	"github.com/spf13/cobra"
@@ -25,7 +24,7 @@ var watchCmd = &cobra.Command{
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 		defer stop()
 
-		database, err := db.Open(config.DBPath())
+		database, err := db.Open(cfg.DBPath())
 		if err != nil {
 			return err
 		}

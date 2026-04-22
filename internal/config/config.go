@@ -15,13 +15,21 @@ type Thresholds struct {
 }
 
 type Config struct {
-	Roots        []string   `yaml:"roots"`
-	Exclude      []string   `yaml:"exclude"`
-	Thresholds   Thresholds `yaml:"thresholds"`
-	ScanInterval string     `yaml:"scan_interval"`
+	Roots         []string   `yaml:"roots"`
+	Exclude       []string   `yaml:"exclude"`
+	Thresholds    Thresholds `yaml:"thresholds"`
+	ScanInterval  string     `yaml:"scan_interval"`
+	Agent         string     `yaml:"agent"`
+	ServePort     int        `yaml:"serve_port"`
+	OllamaModel   string     `yaml:"ollama_model"`
+	OllamaURL     string     `yaml:"ollama_url"`
+	CaptureSource string     `yaml:"capture_source"`
+	CaptureDir    string     `yaml:"capture_dir"`
+	OfflineMode   bool       `yaml:"offline_mode"`
 }
 
 func Default() Config {
+	home, _ := os.UserHomeDir()
 	return Config{
 		Roots: []string{},
 		Exclude: []string{
@@ -36,7 +44,14 @@ func Default() Config {
 			Idle:  3,
 			Stale: 14,
 		},
-		ScanInterval: "30m",
+		ScanInterval:  "30m",
+		Agent:         "claude",
+		ServePort:     7600,
+		OllamaModel:   "nomic-embed-text",
+		OllamaURL:     "http://localhost:11434",
+		CaptureSource: "claude",
+		CaptureDir:    filepath.Join(home, ".claude"),
+		OfflineMode:   true,
 	}
 }
 
@@ -111,19 +126,19 @@ func ExpandPath(path string) string {
 	return path
 }
 
-func NexusDir() string {
+func (cfg Config) NexusDir() string {
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".nexus")
+	return filepath.Join(home, ".nexus", cfg.Agent)
 }
 
-func ConfigPath() string {
-	return filepath.Join(NexusDir(), "config.yaml")
+func (cfg Config) ConfigPath() string {
+	return filepath.Join(cfg.NexusDir(), "config.yaml")
 }
 
-func DBPath() string {
-	return filepath.Join(NexusDir(), "nexus.db")
+func (cfg Config) DBPath() string {
+	return filepath.Join(cfg.NexusDir(), "nexus.db")
 }
 
-func LogPath() string {
-	return filepath.Join(NexusDir(), "nexus.log")
+func (cfg Config) LogPath() string {
+	return filepath.Join(cfg.NexusDir(), "nexus.log")
 }

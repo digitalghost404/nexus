@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/digitalghost404/nexus/internal/capture"
-	"github.com/digitalghost404/nexus/internal/config"
 	"github.com/digitalghost404/nexus/internal/db"
 	"github.com/spf13/cobra"
 )
@@ -21,7 +20,7 @@ var captureCmd = &cobra.Command{
 			return fmt.Errorf("--dir is required")
 		}
 
-		database, err := db.Open(config.DBPath())
+		database, err := db.Open(cfg.DBPath())
 		if err != nil {
 			return fmt.Errorf("open db: %w", err)
 		}
