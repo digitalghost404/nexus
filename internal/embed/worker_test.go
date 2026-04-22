@@ -46,3 +46,34 @@ func TestWorkerStartStop(t *testing.T) {
 	w.Start()
 	w.Stop()
 }
+
+func TestWorkerStopIdempotent(t *testing.T) {
+	client := NewClient("http://localhost:99999", "nomic-embed-text", nil)
+	w := NewWorker(client, nil)
+	w.Start()
+	w.Stop()
+	w.Stop() // should not panic
+}
+
+func TestVecRoundTrip(t *testing.T) {
+	original := []float64{0.1, -0.5, 0.0, 1.0, 3.14159}
+	blob := float64SliceToBlob(original)
+	restored := BlobToFloat64Slice(blob)
+
+	if len(restored) != len(original) {
+		t.Fatalf("expected %d elements, got %d", len(original), len(restored))
+	}
+	for i := range original {
+		if restored[i] != original[i] {
+			t.Errorf("index %d: expected %f, got %f", i, original[i], restored[i])
+		}
+	}
+}
+
+func TestBlobToFloat64SliceOddLength(t *testing.T) {
+	// Odd-length blobs produce empty slice (integer division by 8)
+	result := BlobToFloat64Slice([]byte{0x00, 0x01, 0x02})
+	if len(result) != 0 {
+		t.Errorf("expected empty slice for odd-length blob, got %d elements", len(result))
+	}
+}

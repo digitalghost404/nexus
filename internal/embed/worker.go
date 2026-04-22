@@ -5,15 +5,24 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/digitalghost404/nexus/internal/db"
 )
 
+const (
+	embedPollInterval = 30 * time.Second
+	embedBatchSize    = 10
+	maxContentChars   = 30000
+)
+
 type Worker struct {
-	client *Client
-	db     *sql.DB
-	stop   chan struct{}
+	client   *Client
+	db       *sql.DB
+	stop     chan struct{}
+	stopOnce sync.Once
 }
 
 func NewWorker(client *Client, database *db.DB) *Worker {
@@ -33,11 +42,11 @@ func (w *Worker) Start() {
 }
 
 func (w *Worker) Stop() {
-	close(w.stop)
+	w.stopOnce.Do(func() { close(w.stop) })
 }
 
 func (w *Worker) run() {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(embedPollInterval)
 	defer ticker.Stop()
 
 	w.embedPending()
@@ -54,7 +63,7 @@ func (w *Worker) run() {
 
 type unembeddedItem struct {
 	sourceType string
-	id         string
+	sourceID   int64
 	content    string
 }
 
@@ -63,7 +72,7 @@ func (w *Worker) embedPending() {
 		return
 	}
 
-	items, err := w.getUnembeddedItems(10)
+	items, err := w.getUnembeddedItems(embedBatchSize)
 	if err != nil {
 		log.Printf("embed worker: get unembedded items: %v", err)
 		return
@@ -75,11 +84,14 @@ func (w *Worker) embedPending() {
 
 	texts := make([]string, len(items))
 	for i, item := range items {
-		content, _ := TruncateContent(item.content, 8000)
+		content, _ := TruncateContent(item.content, maxContentChars)
 		texts[i] = content
 	}
 
-	vecs, err := w.client.EmbedBatch(context.Background(), texts)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	vecs, err := w.client.EmbedBatch(ctx, texts)
 	if err != nil {
 		log.Printf("embed worker: embed batch: %v", err)
 		return
@@ -90,7 +102,7 @@ func (w *Worker) embedPending() {
 			break
 		}
 		if err := w.storeEmbedding(item, vecs[i]); err != nil {
-			log.Printf("embed worker: store embedding for %s %s: %v", item.sourceType, item.id, err)
+			log.Printf("embed worker: store embedding for %s %d: %v", item.sourceType, item.sourceID, err)
 		}
 	}
 }
@@ -123,9 +135,11 @@ func (w *Worker) getUnembeddedItems(limit int) ([]unembeddedItem, error) {
 	var items []unembeddedItem
 	for rows.Next() {
 		var item unembeddedItem
-		if err := rows.Scan(&item.sourceType, &item.id, &item.content); err != nil {
+		var idStr string
+		if err := rows.Scan(&item.sourceType, &idStr, &item.content); err != nil {
 			return nil, fmt.Errorf("scan row: %w", err)
 		}
+		item.sourceID, _ = strconv.ParseInt(idStr, 10, 64)
 		items = append(items, item)
 	}
 	return items, rows.Err()
@@ -133,7 +147,8 @@ func (w *Worker) getUnembeddedItems(limit int) ([]unembeddedItem, error) {
 
 func (w *Worker) storeEmbedding(item unembeddedItem, vec []float64) error {
 	vecBlob := float64SliceToBlob(vec)
-	contentHash := ContentHash(item.content)
+	content, truncated := TruncateContent(item.content, maxContentChars)
+	contentHash := ContentHash(content)
 
 	tx, err := w.db.Begin()
 	if err != nil {
@@ -141,17 +156,18 @@ func (w *Worker) storeEmbedding(item unembeddedItem, vec []float64) error {
 	}
 	defer tx.Rollback()
 
-	_, err = tx.Exec(
-		"INSERT INTO embeddings (source_type, source_id, vector, created_at) VALUES (?, ?, ?, ?)",
-		item.sourceType, item.id, vecBlob, time.Now().UTC(),
-	)
+	result, err := tx.Exec("INSERT INTO embeddings (embedding) VALUES (?)", vecBlob)
 	if err != nil {
 		return fmt.Errorf("insert embedding: %w", err)
 	}
+	embID, err := result.LastInsertId()
+	if err != nil {
+		return fmt.Errorf("get embedding id: %w", err)
+	}
 
 	_, err = tx.Exec(
-		"INSERT INTO embedding_meta (source_type, source_id, content_hash, embedded_at) VALUES (?, ?, ?, ?)",
-		item.sourceType, item.id, contentHash, time.Now().UTC(),
+		"INSERT INTO embedding_meta (id, source_type, source_id, content_hash, content_truncated, embedded_at, embedding_model) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		embID, item.sourceType, item.sourceID, contentHash, truncated, time.Now().UTC(), w.client.Model(),
 	)
 	if err != nil {
 		return fmt.Errorf("insert meta: %w", err)

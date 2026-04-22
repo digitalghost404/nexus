@@ -31,6 +31,9 @@ func (c *Client) Embed(ctx context.Context, text string) ([]float64, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(vecs) == 0 {
+		return nil, fmt.Errorf("no embeddings returned")
+	}
 	return vecs[0], nil
 }
 

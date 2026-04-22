@@ -2,6 +2,7 @@ package embed
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -53,5 +54,52 @@ func TestClientModel(t *testing.T) {
 	client := NewClient("http://localhost:11434", "nomic-embed-text", &http.Client{})
 	if client.Model() != "nomic-embed-text" {
 		t.Errorf("expected model 'nomic-embed-text', got %s", client.Model())
+	}
+}
+
+func TestEmbedHTTPError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "nomic-embed-text", server.Client())
+	_, err := client.Embed(context.Background(), "test")
+	if err == nil {
+		t.Error("expected error for non-200 response")
+	}
+}
+
+func TestEmbedRequestFormation(t *testing.T) {
+	var gotMethod, gotPath, gotContentType string
+	var gotBody embedRequest
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod = r.Method
+		gotPath = r.URL.Path
+		gotContentType = r.Header.Get("Content-Type")
+		json.NewDecoder(r.Body).Decode(&gotBody)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"model":"nomic-embed-text","embeddings":[[0.1]]}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "nomic-embed-text", server.Client())
+	client.Embed(context.Background(), "hello")
+
+	if gotMethod != http.MethodPost {
+		t.Errorf("expected POST, got %s", gotMethod)
+	}
+	if gotPath != "/api/embed" {
+		t.Errorf("expected /api/embed, got %s", gotPath)
+	}
+	if gotContentType != "application/json" {
+		t.Errorf("expected application/json, got %s", gotContentType)
+	}
+	if gotBody.Model != "nomic-embed-text" {
+		t.Errorf("expected model 'nomic-embed-text', got %s", gotBody.Model)
+	}
+	if len(gotBody.Input) != 1 || gotBody.Input[0] != "hello" {
+		t.Errorf("expected input ['hello'], got %v", gotBody.Input)
 	}
 }
