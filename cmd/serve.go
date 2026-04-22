@@ -2,13 +2,20 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
+	"github.com/digitalghost404/nexus/internal/capture"
+	nctx "github.com/digitalghost404/nexus/internal/context"
 	"github.com/digitalghost404/nexus/internal/db"
+	"github.com/digitalghost404/nexus/internal/embed"
 	"github.com/spf13/cobra"
 )
 
@@ -24,9 +31,16 @@ var serveCmd = &cobra.Command{
 		}
 		defer database.Close()
 
+		// Start embed worker goroutine
+		ollamaClient := embed.NewClient(cfg.OllamaURL, cfg.OllamaModel, nil)
+		worker := embed.NewWorker(ollamaClient, database)
+		worker.Start()
+		defer worker.Stop()
+
 		mux := http.NewServeMux()
 
 		// GET /api/notes?project=<name>&limit=<n>
+		// POST /api/notes
 		mux.HandleFunc("/api/notes", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -127,11 +141,460 @@ var serveCmd = &cobra.Command{
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		})
 
+		// POST /api/capture — for probe-before-write from capture command
+		mux.HandleFunc("/api/capture", func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodPost {
+				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+
+			var body struct {
+				Dir string `json:"dir"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Dir == "" {
+				http.Error(w, `{"error":"dir is required"}`, http.StatusBadRequest)
+				return
+			}
+
+			result, err := capture.CaptureSession(database, body.Dir, "")
+			if err != nil {
+				http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"project": result.ProjectName,
+				"summary": result.Summary,
+				"commits": result.Commits,
+				"files":   result.Files,
+			})
+		})
+
+		// GET /api/preferences — list preferences
+		// POST /api/preferences — create preference
+		mux.HandleFunc("/api/preferences", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+
+			if r.Method == http.MethodGet {
+				projectStr := r.URL.Query().Get("project_id")
+				var projectID *int64
+				if projectStr != "" {
+					id, err := strconv.ParseInt(projectStr, 10, 64)
+					if err == nil {
+						projectID = &id
+					}
+				}
+
+				prefs, err := database.ListPreferencesByProject(projectID)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]interface{}{"preferences": prefs})
+				return
+			}
+
+			if r.Method == http.MethodPost {
+				var body struct {
+					Category  string  `json:"category"`
+					Content   string  `json:"content"`
+					Source    string  `json:"source"`
+					ProjectID *int64  `json:"project_id"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Content == "" {
+					http.Error(w, `{"error":"content is required"}`, http.StatusBadRequest)
+					return
+				}
+
+				if body.Category == "" {
+					body.Category = "preference"
+				}
+				if body.Source == "" {
+					body.Source = "stated"
+				}
+
+				confidence := 1.0
+				if body.Source == "observed" {
+					confidence = 0.7
+				} else if body.Source == "inferred" {
+					confidence = 0.4
+				}
+
+				id, err := database.InsertPreference(db.Preference{
+					ProjectID:  body.ProjectID,
+					Category:   body.Category,
+					Content:    body.Content,
+					Source:     body.Source,
+					Confidence: confidence,
+				})
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				json.NewEncoder(w).Encode(map[string]interface{}{"id": id, "content": body.Content})
+				return
+			}
+
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		})
+
+		// PATCH /api/preferences/{id} — update preference
+		// DELETE /api/preferences/{id} — delete preference
+		mux.HandleFunc("/api/preferences/{id}", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "PATCH, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+
+			idStr := r.PathValue("id")
+			id, err := strconv.ParseInt(idStr, 10, 64)
+			if err != nil {
+				http.Error(w, `{"error":"invalid id"}`, http.StatusBadRequest)
+				return
+			}
+
+			if r.Method == http.MethodPatch {
+				var body struct {
+					Category   string   `json:"category"`
+					Content    string   `json:"content"`
+					Source     string   `json:"source"`
+					Confidence *float64 `json:"confidence"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					http.Error(w, `{"error":"bad request"}`, http.StatusBadRequest)
+					return
+				}
+
+				existing, err := database.GetPreference(id)
+				if err != nil {
+					http.Error(w, `{"error":"preference not found"}`, http.StatusNotFound)
+					return
+				}
+
+				// Build update fields
+				category := existing.Category
+				if body.Category != "" {
+					category = body.Category
+				}
+				content := existing.Content
+				if body.Content != "" {
+					content = body.Content
+				}
+				source := existing.Source
+				if body.Source != "" {
+					source = body.Source
+				}
+				confidence := existing.Confidence
+				if body.Confidence != nil {
+					confidence = *body.Confidence
+				}
+
+				_, err = database.Conn().Exec(
+					"UPDATE preferences SET category = ?, content = ?, source = ?, confidence = ?, updated_at = ? WHERE id = ?",
+					category, content, source, confidence, time.Now(), id,
+				)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]interface{}{"id": id, "updated": true})
+				return
+			}
+
+			if r.Method == http.MethodDelete {
+				_, err := database.Conn().Exec("DELETE FROM preferences WHERE id = ?", id)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]interface{}{"id": id, "deleted": true})
+				return
+			}
+
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		})
+
+		// POST /api/recall — semantic search
+		mux.HandleFunc("/api/recall", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+
+			if r.Method != http.MethodPost {
+				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+
+			var body struct {
+				Query string   `json:"query"`
+				Limit int      `json:"limit"`
+				Types []string `json:"types"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Query == "" {
+				http.Error(w, `{"error":"query is required"}`, http.StatusBadRequest)
+				return
+			}
+
+			if body.Limit <= 0 {
+				body.Limit = 5
+			}
+			if len(body.Types) == 0 {
+				body.Types = []string{"session", "note", "preference"}
+			}
+
+			var results []nctx.RecallResult
+
+			// Try semantic search via ollama
+			vec, vecErr := ollamaClient.Embed(r.Context(), body.Query)
+			if vecErr != nil {
+				// Fallback to FTS5 keyword search
+				for _, typ := range body.Types {
+					switch typ {
+					case "session":
+						sessions, err := database.SearchSessions(body.Query)
+						if err != nil {
+							continue
+						}
+						for _, s := range sessions {
+							results = append(results, nctx.RecallResult{
+								SourceType: "session",
+								SourceID:   s.ID,
+								Content:    s.Summary,
+								Score:      0.5,
+							})
+						}
+					case "note":
+						notes, err := database.SearchNotes(body.Query)
+						if err != nil {
+							continue
+						}
+						for _, n := range notes {
+							results = append(results, nctx.RecallResult{
+								SourceType: "note",
+								SourceID:   n.ID,
+								Content:    n.Content,
+								Score:      0.5,
+							})
+						}
+					case "preference":
+						prefs, err := database.SearchPreferences(body.Query)
+						if err != nil {
+							continue
+						}
+						for _, p := range prefs {
+							results = append(results, nctx.RecallResult{
+								SourceType: "preference",
+								SourceID:   p.ID,
+								Content:    p.Content,
+								Score:      float64(p.Confidence),
+							})
+						}
+					}
+				}
+			} else {
+				// Semantic search with vector similarity
+				for _, typ := range body.Types {
+					similar, err := database.SearchSimilar(vec, typ, body.Limit, 0.7)
+					if err != nil {
+						continue
+					}
+					for _, s := range similar {
+						results = append(results, nctx.RecallResult{
+							SourceType: s.SourceType,
+							SourceID:   s.SourceID,
+							Content:    s.Content,
+							Score:      s.Score,
+						})
+					}
+				}
+			}
+
+			// Limit results
+			if len(results) > body.Limit {
+				results = results[:body.Limit]
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{"results": results})
+		})
+
+		// POST /api/inject — build smart context
+		mux.HandleFunc("/api/inject", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+
+			if r.Method != http.MethodPost {
+				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+
+			var body struct {
+				Project       string `json:"project"`
+				TaskDesc      string `json:"task_description"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Project == "" {
+				http.Error(w, `{"error":"project is required"}`, http.StatusBadRequest)
+				return
+			}
+
+			project, err := database.GetProjectByName(body.Project)
+			if err != nil || project == nil {
+				http.Error(w, fmt.Sprintf(`{"error":"project %q not found"}`, body.Project), http.StatusNotFound)
+				return
+			}
+
+			// Pass 1: Recent sessions
+			sessions, _ := database.ListSessions(db.SessionFilter{ProjectID: project.ID, Limit: 5})
+
+			// Pass 2: Semantic recall (if ollama available)
+			var recallResults []nctx.RecallResult
+			ollamaAvailable := true
+			_, err = ollamaClient.Embed(r.Context(), body.TaskDesc)
+			if err != nil {
+				ollamaAvailable = false
+			} else {
+				vec, vecErr := ollamaClient.Embed(r.Context(), body.TaskDesc)
+				if vecErr == nil {
+					for _, typ := range []string{"session", "note", "preference"} {
+						similar, sErr := database.SearchSimilar(vec, typ, 3, 0.7)
+						if sErr != nil {
+							continue
+						}
+						for _, s := range similar {
+							recallResults = append(recallResults, nctx.RecallResult{
+								SourceType: s.SourceType,
+								SourceID:   s.SourceID,
+								Content:    s.Content,
+								Score:      s.Score,
+							})
+						}
+					}
+				}
+			}
+
+			// Pass 3: Preferences
+				prefs, _ := database.ListPreferencesByProject(&project.ID)
+
+			ctxOutput := nctx.BuildContext(nctx.ContextOptions{
+				Project:         project,
+				RecentSessions:  sessions,
+				RecallResults:   recallResults,
+				Preferences:     prefs,
+				TaskDescription: body.TaskDesc,
+				OllamaAvailable: ollamaAvailable,
+			})
+
+			// Cold start check
+			if ctxOutput == "" {
+				ctxOutput = "Nexus memory is empty. Context will build as sessions accumulate. Use `remember` to save preferences manually."
+			}
+
+			w.Header().Set("Content-Type", "text/plain")
+			fmt.Fprint(w, ctxOutput)
+		})
+
+		// GET /api/embed/status — embedding queue status
+		mux.HandleFunc("/api/embed/status", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+
+			if r.Method != http.MethodGet {
+				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+
+			// Count unembedded items
+			var queueDepth int
+			err := database.Conn().QueryRow(`
+				SELECT COUNT(*) FROM (
+					SELECT s.id FROM sessions s
+					LEFT JOIN embedding_meta em ON em.source_type = 'session' AND em.source_id = s.id
+					WHERE em.id IS NULL AND s.summary IS NOT NULL AND s.summary != ''
+					UNION ALL
+					SELECT n.id FROM notes n
+					LEFT JOIN embedding_meta em ON em.source_type = 'note' AND em.source_id = n.id
+					WHERE em.id IS NULL AND n.content IS NOT NULL AND n.content != ''
+					UNION ALL
+					SELECT p.id FROM preferences p
+					LEFT JOIN embedding_meta em ON em.source_type = 'preference' AND em.source_id = p.id
+					WHERE em.id IS NULL AND p.content IS NOT NULL AND p.content != '' AND p.superseded_by IS NULL
+				)
+			`).Scan(&queueDepth)
+			if err != nil {
+				queueDepth = -1
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"queue_depth":   queueDepth,
+				"model":         cfg.OllamaModel,
+				"ollama_url":    cfg.OllamaURL,
+				"poll_interval": embedPollIntervalSecs,
+			})
+		})
+
 		addr := fmt.Sprintf("127.0.0.1:%d", port)
 		fmt.Printf("Nexus API listening on http://%s\n", addr)
-		return http.ListenAndServe(addr, mux)
+
+		// Graceful shutdown
+		srv := &http.Server{Addr: addr, Handler: mux}
+		go func() {
+			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				fmt.Fprintf(os.Stderr, "serve: %v\n", err)
+				os.Exit(1)
+			}
+		}()
+
+		quit := make(chan os.Signal, 1)
+		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+		<-quit
+		fmt.Println("\nShutting down Nexus API...")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		return srv.Shutdown(ctx)
 	},
 }
+
+const embedPollIntervalSecs = 30
 
 func init() {
 	serveCmd.Flags().Int("port", 7600, "Port to listen on")
