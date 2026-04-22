@@ -135,7 +135,7 @@ func (d *DB) DecayPreferences() error {
 		var lastRef sql.NullTime
 
 		if err := rows.Scan(&id, &source, &confidence, &lastRef); err != nil {
-			continue
+			return fmt.Errorf("scan preference %d: %w", id, err)
 		}
 
 		halfLife := halfLifeStated

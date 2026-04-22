@@ -94,6 +94,27 @@ func TestListPreferencesByProject(t *testing.T) {
 	}
 }
 
+func TestListPreferencesByProjectExcludesLowConfidence(t *testing.T) {
+	d := testDB(t)
+
+	proj := Project{Name: "axon", Path: "/tmp/axon", Status: "active"}
+	projID, _ := d.UpsertProject(proj)
+
+	d.InsertPreference(Preference{ProjectID: &projID, Category: "workflow", Content: "High conf", Source: "stated", Confidence: 1.0})
+	d.InsertPreference(Preference{ProjectID: &projID, Category: "pattern", Content: "Low conf", Source: "inferred", Confidence: 0.2})
+
+	projPrefs, err := d.ListPreferencesByProject(&projID)
+	if err != nil {
+		t.Fatalf("ListPreferencesByProject: %v", err)
+	}
+	if len(projPrefs) != 1 {
+		t.Errorf("expected 1 pref (low confidence excluded), got %d", len(projPrefs))
+	}
+	if projPrefs[0].Content != "High conf" {
+		t.Errorf("expected 'High conf', got '%s'", projPrefs[0].Content)
+	}
+}
+
 func TestDecayPreference(t *testing.T) {
 	d := testDB(t)
 
@@ -115,8 +136,21 @@ func TestDecayPreference(t *testing.T) {
 	}
 
 	fetched, _ := d.GetPreference(id)
-	if fetched.Confidence >= 0.4 {
-		t.Errorf("expected confidence to decay below 0.4, got %f", fetched.Confidence)
+	// 60 days, 45-day half-life: 0.4 * 0.5^(60/45) ≈ 0.159
+	if fetched.Confidence >= 0.2 {
+		t.Errorf("expected confidence to decay below 0.2, got %f", fetched.Confidence)
+	}
+	if fetched.Confidence < 0.1 {
+		t.Errorf("expected confidence above 0.1, got %f", fetched.Confidence)
+	}
+}
+
+func TestGetPreferenceNotFound(t *testing.T) {
+	d := testDB(t)
+
+	_, err := d.GetPreference(99999)
+	if err == nil {
+		t.Error("expected error for non-existent preference")
 	}
 }
 
