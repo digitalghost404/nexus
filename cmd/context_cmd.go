@@ -4,12 +4,15 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
 	"github.com/digitalghost404/nexus/internal/capture"
+	"github.com/digitalghost404/nexus/internal/context"
 	"github.com/digitalghost404/nexus/internal/db"
 	"github.com/digitalghost404/nexus/internal/display"
+	"github.com/digitalghost404/nexus/internal/embed"
 	"github.com/spf13/cobra"
 )
 
@@ -19,6 +22,8 @@ var contextCmd = &cobra.Command{
 	Long:  "Outputs everything Nexus knows about a project in markdown format, optimized for sharing with Claude.",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		injectMode, _ := cmd.Flags().GetBool("inject")
+
 		database, err := db.Open(cfg.DBPath())
 		if err != nil {
 			return err
@@ -33,13 +38,15 @@ var contextCmd = &cobra.Command{
 			return fmt.Errorf("project not found: %s", args[0])
 		}
 
+		if injectMode {
+			return runInjectContext(database, p, cmd)
+		}
+
 		since := time.Now().AddDate(0, 0, -7)
 		sessions, _ := database.GetSessionsInRange(p.ID, since, time.Now())
 		notes, _ := database.ListNotes(p.ID, 10)
 
-		// Linked projects — conditional on v2 migration
 		var linkedProjects []db.Project
-		// Try to query project_links; if table doesn't exist, just skip
 		linkedProjects, _ = database.GetLinkedProjects(p.ID)
 
 		digests := make(map[int64]string)
@@ -66,7 +73,76 @@ var contextCmd = &cobra.Command{
 	},
 }
 
+func runInjectContext(database *db.DB, p *db.Project, cmd *cobra.Command) error {
+	since := time.Now().AddDate(0, 0, -7)
+	sessions, _ := database.GetSessionsInRange(p.ID, since, time.Now())
+
+	ollamaAvailable := true
+	var recallResults []context.RecallResult
+
+	client := embed.NewClient(cfg.OllamaURL, cfg.OllamaModel, &http.Client{Timeout: 5 * time.Second})
+	vec, err := client.Embed(cmd.Context(), p.Name+" "+p.LastCommitMsg)
+	if err != nil {
+		ollamaAvailable = false
+	} else {
+		for _, typ := range []string{"session", "note", "preference"} {
+			similar, err := database.SearchSimilar(vec, typ, 5, 0.7)
+			if err != nil {
+				continue
+			}
+			for _, s := range similar {
+				var date *time.Time
+				var dateQuery string
+				switch typ {
+				case "session":
+					dateQuery = "SELECT started_at FROM sessions WHERE id = ?"
+				case "note":
+					dateQuery = "SELECT created_at FROM notes WHERE id = ?"
+				case "preference":
+					dateQuery = "SELECT created_at FROM preferences WHERE id = ?"
+				}
+				if dateQuery != "" {
+					var t time.Time
+					if err := database.Conn().QueryRow(dateQuery, s.SourceID).Scan(&t); err == nil {
+						date = &t
+					}
+				}
+				recallResults = append(recallResults, context.RecallResult{
+					SourceType: s.SourceType,
+					SourceID:   s.SourceID,
+					Content:    s.Content,
+					Score:      s.Score,
+					Date:       date,
+				})
+			}
+		}
+	}
+
+	var projectID *int64
+	pid := p.ID
+	projectID = &pid
+	prefs, _ := database.ListPreferencesByProject(projectID)
+
+	opts := context.ContextOptions{
+		Project:        p,
+		RecentSessions: sessions,
+		RecallResults:  recallResults,
+		Preferences:    prefs,
+		OllamaAvailable: ollamaAvailable,
+	}
+
+	output := context.BuildContext(opts)
+	if output == "" {
+		fmt.Println("Nexus memory is empty. Context will build as sessions accumulate. Use `remember` to save preferences manually.")
+		return nil
+	}
+
+	fmt.Println(output)
+	return nil
+}
+
 func init() {
 	contextCmd.GroupID = "workflow"
+	contextCmd.Flags().Bool("inject", false, "Use smart 3-pass context builder with semantic recall and preferences")
 	rootCmd.AddCommand(contextCmd)
 }
