@@ -18,7 +18,7 @@ func TestSearchSessionsFTSSafety(t *testing.T) {
 		Name:         "proj",
 		Path:         "/a",
 		Status:       "active",
-		DiscoveredAt: now,
+		DiscoveredAt: NullTime{Time: now, Valid: true},
 	})
 	if err != nil {
 		t.Fatalf("upsert project: %v", err)

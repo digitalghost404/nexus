@@ -10,7 +10,7 @@ import (
 func insertTestSession(t *testing.T, d *DB) int64 {
 	t.Helper()
 	now := time.Now()
-	pID, err := d.UpsertProject(Project{Name: "proj", Path: "/test", Status: "active", DiscoveredAt: now})
+	pID, err := d.UpsertProject(Project{Name: "proj", Path: "/test", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 	if err != nil {
 		t.Fatalf("upsert project: %v", err)
 	}

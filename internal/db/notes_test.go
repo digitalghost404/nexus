@@ -10,7 +10,7 @@ func TestInsertAndSearchNotes(t *testing.T) {
 	d := testDB(t)
 
 	now := time.Now()
-	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: now})
+	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 
 	_, err := d.InsertNote(Note{ProjectID: &pID, Content: "migrated auth to JWT"})
 	if err != nil {

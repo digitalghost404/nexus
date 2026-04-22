@@ -75,8 +75,8 @@ func TestSchemaVersion(t *testing.T) {
 
 	var version int
 	d.db.QueryRow("PRAGMA user_version").Scan(&version)
-	if version != 3 {
-		t.Errorf("expected user_version=3, got: %d", version)
+	if version != 5 {
+		t.Errorf("expected user_version=5, got: %d", version)
 	}
 }
 

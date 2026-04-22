@@ -74,6 +74,7 @@ func (d *DB) migrate() error {
 		if _, err := d.db.Exec("PRAGMA user_version = 3"); err != nil {
 			return fmt.Errorf("set version: %w", err)
 		}
+		version = 3
 	}
 
 	if version == 1 {

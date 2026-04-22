@@ -10,7 +10,7 @@ func TestInsertAndListSessions(t *testing.T) {
 	d := testDB(t)
 
 	now := time.Now()
-	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: now})
+	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 
 	s := Session{
 		ProjectID: pID,
@@ -44,8 +44,8 @@ func TestListSessionsByProject(t *testing.T) {
 	d := testDB(t)
 
 	now := time.Now()
-	p1, _ := d.UpsertProject(Project{Name: "proj1", Path: "/a", Status: "active", DiscoveredAt: now})
-	p2, _ := d.UpsertProject(Project{Name: "proj2", Path: "/b", Status: "active", DiscoveredAt: now})
+	p1, _ := d.UpsertProject(Project{Name: "proj1", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
+	p2, _ := d.UpsertProject(Project{Name: "proj2", Path: "/b", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 
 	d.InsertSession(Session{ProjectID: p1, Summary: "session 1", Source: "wrapper", StartedAt: &now})
 	d.InsertSession(Session{ProjectID: p2, Summary: "session 2", Source: "wrapper", StartedAt: &now})
@@ -64,7 +64,7 @@ func TestSearchSessions(t *testing.T) {
 	d := testDB(t)
 
 	now := time.Now()
-	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: now})
+	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 
 	d.InsertSession(Session{ProjectID: pID, Summary: "Added retry logic to DNS scanner", Source: "wrapper", StartedAt: &now})
 	d.InsertSession(Session{ProjectID: pID, Summary: "Fixed database migration bug", Source: "wrapper", StartedAt: &now})
@@ -83,7 +83,7 @@ func TestSessionDedup(t *testing.T) {
 	d := testDB(t)
 
 	now := time.Now()
-	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: now})
+	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 
 	_, err := d.InsertSession(Session{
 		ProjectID:       pID,
@@ -109,7 +109,7 @@ func TestSessionDedup(t *testing.T) {
 func TestGetLatestSession(t *testing.T) {
 	d := testDB(t)
 	now := time.Now()
-	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: now})
+	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 
 	earlier := now.Add(-2 * time.Hour)
 	d.InsertSession(Session{ProjectID: pID, Summary: "first", Source: "wrapper", StartedAt: &earlier})
@@ -127,7 +127,7 @@ func TestGetLatestSession(t *testing.T) {
 func TestGetLatestSessionEmpty(t *testing.T) {
 	d := testDB(t)
 	now := time.Now()
-	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: now})
+	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 
 	s, err := d.GetLatestSession(pID)
 	if err != nil {
@@ -141,7 +141,7 @@ func TestGetLatestSessionEmpty(t *testing.T) {
 func TestGetSessionsInRange(t *testing.T) {
 	d := testDB(t)
 	now := time.Now()
-	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: now})
+	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 
 	old := now.Add(-10 * 24 * time.Hour)
 	recent := now.Add(-1 * time.Hour)
@@ -161,7 +161,7 @@ func TestGetSessionsInRange(t *testing.T) {
 func TestGetDistinctSessionDates(t *testing.T) {
 	d := testDB(t)
 	now := time.Now()
-	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: now})
+	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 
 	day1 := now.Add(-48 * time.Hour)
 	day2 := now.Add(-24 * time.Hour)

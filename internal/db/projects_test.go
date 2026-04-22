@@ -20,7 +20,7 @@ func TestUpsertAndGetProject(t *testing.T) {
 		Dirty:        true,
 		DirtyFiles:   3,
 		Status:       "active",
-		DiscoveredAt: now,
+		DiscoveredAt: NullTime{Time: now, Valid: true},
 	}
 
 	id, err := d.UpsertProject(p)
@@ -47,9 +47,9 @@ func TestListProjectsByStatus(t *testing.T) {
 	d := testDB(t)
 
 	now := time.Now()
-	d.UpsertProject(Project{Name: "active1", Path: "/a", Status: "active", DiscoveredAt: now})
-	d.UpsertProject(Project{Name: "stale1", Path: "/b", Status: "stale", DiscoveredAt: now})
-	d.UpsertProject(Project{Name: "active2", Path: "/c", Status: "active", DiscoveredAt: now})
+	d.UpsertProject(Project{Name: "active1", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
+	d.UpsertProject(Project{Name: "stale1", Path: "/b", Status: "stale", DiscoveredAt: NullTime{Time: now, Valid: true}})
+	d.UpsertProject(Project{Name: "active2", Path: "/c", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 
 	active, err := d.ListProjects("active")
 	if err != nil {
@@ -72,8 +72,8 @@ func TestListDirtyProjects(t *testing.T) {
 	d := testDB(t)
 
 	now := time.Now()
-	d.UpsertProject(Project{Name: "clean", Path: "/a", Dirty: false, Status: "active", DiscoveredAt: now})
-	d.UpsertProject(Project{Name: "dirty", Path: "/b", Dirty: true, DirtyFiles: 2, Status: "active", DiscoveredAt: now})
+	d.UpsertProject(Project{Name: "clean", Path: "/a", Dirty: false, Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
+	d.UpsertProject(Project{Name: "dirty", Path: "/b", Dirty: true, DirtyFiles: 2, Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 
 	dirty, err := d.ListDirtyProjects()
 	if err != nil {
@@ -88,8 +88,8 @@ func TestUpsertProjectUpdatesExisting(t *testing.T) {
 	d := testDB(t)
 
 	now := time.Now()
-	d.UpsertProject(Project{Name: "proj", Path: "/a", Branch: "main", Status: "active", DiscoveredAt: now})
-	d.UpsertProject(Project{Name: "proj", Path: "/a", Branch: "develop", Status: "idle", DiscoveredAt: now})
+	d.UpsertProject(Project{Name: "proj", Path: "/a", Branch: "main", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
+	d.UpsertProject(Project{Name: "proj", Path: "/a", Branch: "develop", Status: "idle", DiscoveredAt: NullTime{Time: now, Valid: true}})
 
 	got, err := d.GetProjectByPath("/a")
 	if err != nil {

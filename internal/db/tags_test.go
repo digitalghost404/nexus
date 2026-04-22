@@ -9,7 +9,7 @@ import (
 func TestAddAndListSessionTags(t *testing.T) {
 	d := testDB(t)
 	now := time.Now()
-	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: now})
+	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 	sID, _ := d.InsertSession(Session{ProjectID: pID, Summary: "test", Source: "wrapper", StartedAt: &now})
 
 	d.AddSessionTag(sID, "breakthrough")
@@ -24,7 +24,7 @@ func TestAddAndListSessionTags(t *testing.T) {
 func TestRemoveSessionTag(t *testing.T) {
 	d := testDB(t)
 	now := time.Now()
-	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: now})
+	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 	sID, _ := d.InsertSession(Session{ProjectID: pID, Summary: "test", Source: "wrapper", StartedAt: &now})
 
 	d.AddSessionTag(sID, "remove-me")
@@ -39,7 +39,7 @@ func TestRemoveSessionTag(t *testing.T) {
 func TestListSessionsByTag(t *testing.T) {
 	d := testDB(t)
 	now := time.Now()
-	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: now})
+	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 	s1, _ := d.InsertSession(Session{ProjectID: pID, Summary: "tagged", Source: "wrapper", StartedAt: &now})
 	d.InsertSession(Session{ProjectID: pID, Summary: "not tagged", Source: "wrapper", StartedAt: &now})
 
