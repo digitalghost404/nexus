@@ -2,11 +2,14 @@ package db
 
 import (
 	"crypto/sha256"
+	"database/sql"
 	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"math"
 	"sort"
 	"time"
+	"unicode/utf8"
 )
 
 type EmbeddingResult struct {
@@ -22,15 +25,18 @@ func (d *DB) StoreEmbedding(sourceType string, sourceID int64, content string, v
 
 	tx, err := d.db.Begin()
 	if err != nil {
-		return err
+		return fmt.Errorf("begin tx: %w", err)
 	}
 	defer tx.Rollback()
 
 	result, err := tx.Exec("INSERT INTO embeddings (embedding) VALUES (?)", blob)
 	if err != nil {
-		return err
+		return fmt.Errorf("insert embedding: %w", err)
 	}
-	embID, _ := result.LastInsertId()
+	embID, err := result.LastInsertId()
+	if err != nil {
+		return fmt.Errorf("get embedding id: %w", err)
+	}
 
 	content, wasTruncated := truncateContent(content, 30000)
 	hash := contentHash(content)
@@ -41,7 +47,7 @@ func (d *DB) StoreEmbedding(sourceType string, sourceID int64, content string, v
 		embID, sourceType, sourceID, hash, truncated || wasTruncated, time.Now(), model,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("insert meta: %w", err)
 	}
 
 	return tx.Commit()
@@ -56,7 +62,7 @@ func (d *DB) SearchSimilar(queryVec []float64, sourceType string, limit int, min
 		sourceType,
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("query embeddings: %w", err)
 	}
 	defer rows.Close()
 
@@ -74,7 +80,7 @@ func (d *DB) SearchSimilar(queryVec []float64, sourceType string, limit int, min
 		var sourceID int64
 
 		if err := rows.Scan(&st, &sourceID, &embID); err != nil {
-			continue
+			return nil, fmt.Errorf("scan embedding: %w", err)
 		}
 
 		var blob []byte
@@ -92,6 +98,9 @@ func (d *DB) SearchSimilar(queryVec []float64, sourceType string, limit int, min
 			candidates = append(candidates, candidate{embID: embID, sourceType: st, sourceID: sourceID, score: score})
 		}
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate embeddings: %w", err)
+	}
 
 	sort.Slice(candidates, func(i, j int) bool {
 		return candidates[i].score > candidates[j].score
@@ -108,9 +117,23 @@ func (d *DB) SearchSimilar(queryVec []float64, sourceType string, limit int, min
 			SourceType: c.sourceType,
 			SourceID:   c.sourceID,
 			Score:      c.score,
+			Content:    getContentForSource(d.db, c.sourceType, c.sourceID),
 		}
 	}
 	return results, nil
+}
+
+func getContentForSource(db *sql.DB, sourceType string, sourceID int64) string {
+	var content string
+	switch sourceType {
+	case "session":
+		db.QueryRow("SELECT summary FROM sessions WHERE id = ?", sourceID).Scan(&content)
+	case "note":
+		db.QueryRow("SELECT content FROM notes WHERE id = ?", sourceID).Scan(&content)
+	case "preference":
+		db.QueryRow("SELECT content FROM preferences WHERE id = ?", sourceID).Scan(&content)
+	}
+	return content
 }
 
 func CosineSimilarity(a, b []float64) float64 {
@@ -149,10 +172,11 @@ func blobToFloat64Slice(blob []byte) []float64 {
 }
 
 func truncateContent(content string, maxChars int) (string, bool) {
-	if len(content) <= maxChars {
+	if utf8.RuneCountInString(content) <= maxChars {
 		return content, false
 	}
-	return content[:maxChars], true
+	runes := []rune(content)
+	return string(runes[:maxChars]), true
 }
 
 func contentHash(content string) string {
