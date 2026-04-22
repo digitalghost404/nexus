@@ -110,6 +110,10 @@ func (d *DB) migrate() error {
 		if _, err := d.db.Exec(migrationV5SQL); err != nil {
 			return fmt.Errorf("apply v5 migration: %w", err)
 		}
+		if _, err := d.db.Exec("PRAGMA user_version = 5"); err != nil {
+			return fmt.Errorf("set version: %w", err)
+		}
+		version = 5
 	}
 
 	return nil

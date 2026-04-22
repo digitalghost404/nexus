@@ -57,7 +57,3 @@ CREATE TABLE IF NOT EXISTS embeddings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     embedding BLOB NOT NULL
 );
-
-CREATE INDEX idx_embeddings_id ON embeddings(id);
-
-PRAGMA user_version = 5;
