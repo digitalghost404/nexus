@@ -3,11 +3,12 @@ package context
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/digitalghost404/nexus/internal/db"
 )
 
-func TestBuildContextProjectState(t *testing.T) {
+func TestFormatProjectState(t *testing.T) {
 	project := &db.Project{
 		Name:          "axon",
 		Branch:        "main",
@@ -19,7 +20,7 @@ func TestBuildContextProjectState(t *testing.T) {
 		{Summary: "Implemented shader pipeline refactor"},
 	}
 
-	output := FormatProjectState(project, sessions, nil)
+	output := FormatProjectState(project, sessions)
 	if !strings.Contains(output, "## Project: axon") {
 		t.Errorf("expected project header, got:\n%s", output)
 	}
@@ -28,7 +29,7 @@ func TestBuildContextProjectState(t *testing.T) {
 	}
 }
 
-func TestBuildContextWithPreferences(t *testing.T) {
+func TestFormatPreferences(t *testing.T) {
 	prefs := []db.Preference{
 		{Category: "workflow", Content: "Always run clippy before push", Source: "stated", Confidence: 1.0},
 		{Category: "style", Content: "Terse responses", Source: "stated", Confidence: 1.0},
@@ -43,7 +44,7 @@ func TestBuildContextWithPreferences(t *testing.T) {
 	}
 }
 
-func TestBuildContextWithRecall(t *testing.T) {
+func TestFormatRecall(t *testing.T) {
 	results := []RecallResult{
 		{SourceType: "session", SourceID: 1, Content: "Auth system design — decided on JWT", Score: 0.92},
 		{SourceType: "note", SourceID: 5, Content: "Use ollama for local embeddings", Score: 0.85},
@@ -185,8 +186,9 @@ func TestFormatRecallLabels(t *testing.T) {
 }
 
 func TestFormatRecallWithDate(t *testing.T) {
+	date := time.Date(2026, 4, 20, 0, 0, 0, 0, time.UTC)
 	results := []RecallResult{
-		{SourceType: "session", SourceID: 1, Content: "content", Score: 0.9, Date: "2026-04-20"},
+		{SourceType: "session", SourceID: 1, Content: "content", Score: 0.9, Date: &date},
 	}
 
 	output := FormatRecall(results)
@@ -196,7 +198,7 @@ func TestFormatRecallWithDate(t *testing.T) {
 }
 
 func TestFormatProjectStateWithNilProject(t *testing.T) {
-	output := FormatProjectState(nil, nil, nil)
+	output := FormatProjectState(nil, nil)
 	if output == "" {
 		t.Error("expected non-empty output for nil project")
 	}

@@ -8,7 +8,7 @@ import (
 	"github.com/digitalghost404/nexus/internal/db"
 )
 
-func FormatProjectState(project *db.Project, sessions []db.Session, notes []db.Note) string {
+func FormatProjectState(project *db.Project, sessions []db.Session) string {
 	var b strings.Builder
 
 	b.WriteString(formatProjectHeader(project))
@@ -27,21 +27,29 @@ func FormatProjectState(project *db.Project, sessions []db.Session, notes []db.N
 	return b.String()
 }
 
+var sourceLabels = map[string]string{
+	"session":    "session",
+	"note":       "note",
+	"preference": "pref",
+}
+
 func FormatRecall(results []RecallResult) string {
+	if len(results) == 0 {
+		return ""
+	}
+
 	var b strings.Builder
 	b.WriteString("### Recall: Related Context\n")
 
 	for _, r := range results {
-		label := "session"
-		if r.SourceType == "note" {
-			label = "note"
-		} else if r.SourceType == "preference" {
-			label = "pref"
+		label := sourceLabels[r.SourceType]
+		if label == "" {
+			label = r.SourceType
 		}
 
 		dateStr := ""
-		if r.Date != "" {
-			dateStr = r.Date + ": "
+		if r.Date != nil {
+			dateStr = r.Date.Format("2006-01-02") + ": "
 		}
 
 		b.WriteString(fmt.Sprintf("- [%s] %s%s\n", label, dateStr, r.Content))
@@ -51,13 +59,20 @@ func FormatRecall(results []RecallResult) string {
 }
 
 func FormatPreferences(prefs []db.Preference) string {
+	var filtered []db.Preference
+	for _, p := range prefs {
+		if p.Confidence >= 0.3 {
+			filtered = append(filtered, p)
+		}
+	}
+	if len(filtered) == 0 {
+		return ""
+	}
+
 	var b strings.Builder
 	b.WriteString("### Preferences\n")
 
-	for _, p := range prefs {
-		if p.Confidence < 0.3 {
-			continue
-		}
+	for _, p := range filtered {
 		sourceTag := ""
 		if p.Source != "stated" {
 			sourceTag = fmt.Sprintf(" (%s, %.0f%%)", p.Source, p.Confidence*100)

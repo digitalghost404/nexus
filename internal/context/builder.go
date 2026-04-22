@@ -2,6 +2,7 @@ package context
 
 import (
 	"strings"
+	"time"
 
 	"github.com/digitalghost404/nexus/internal/db"
 )
@@ -11,7 +12,7 @@ type RecallResult struct {
 	SourceID   int64
 	Content    string
 	Score      float64
-	Date       string
+	Date       *time.Time
 }
 
 type ContextOptions struct {
@@ -27,7 +28,7 @@ func BuildContext(opts ContextOptions) string {
 	var sections []string
 
 	// Pass 1: Project state
-	sections = append(sections, FormatProjectState(opts.Project, opts.RecentSessions, nil))
+	sections = append(sections, FormatProjectState(opts.Project, opts.RecentSessions))
 
 	// Pass 2: Semantic recall
 	if len(opts.RecallResults) > 0 {
@@ -37,8 +38,9 @@ func BuildContext(opts ContextOptions) string {
 	}
 
 	// Pass 3: Preferences
-	if len(opts.Preferences) > 0 {
-		sections = append(sections, FormatPreferences(opts.Preferences))
+	prefsSection := FormatPreferences(opts.Preferences)
+	if prefsSection != "" {
+		sections = append(sections, prefsSection)
 	}
 
 	return strings.Join(sections, "\n\n")
