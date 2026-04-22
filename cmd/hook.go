@@ -237,7 +237,7 @@ var hookInstallCmd = &cobra.Command{
 		if !safePathRe.MatchString(nexusPath) {
 			return fmt.Errorf("nexus binary path contains unsafe characters: %s", nexusPath)
 		}
-		nexusDir := home + "/.nexus"
+		nexusDir := cfg.NexusDir()
 
 		if err := installCron(nexusPath, nexusDir); err != nil {
 			if err := installSystemdTimer(nexusPath, nexusDir); err != nil {
