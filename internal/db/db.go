@@ -151,5 +151,16 @@ func moveFile(src, dst string) error {
 	if !fileExists(src) {
 		return nil
 	}
-	return os.Rename(src, dst)
+	if err := os.Rename(src, dst); err == nil {
+		return nil
+	}
+	// Fallback for cross-device moves: copy then delete
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", src, err)
+	}
+	if err := os.WriteFile(dst, data, 0600); err != nil {
+		return fmt.Errorf("write %s: %w", dst, err)
+	}
+	return os.Remove(src)
 }
