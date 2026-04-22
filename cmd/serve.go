@@ -67,76 +67,64 @@ var serveCmd = &cobra.Command{
 					}
 				}
 
-				notes, err := database.ListNotes(projectID, limit)
+			notes, err := database.ListNotes(projectID, limit)
 				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
+					jsonResponse(w, http.StatusInternalServerError, "failed to list notes")
 					return
-				}
-
-				type noteJSON struct {
-					ID        int64  `json:"id"`
-					Text      string `json:"text"`
-					Timestamp string `json:"timestamp"`
 				}
 
 				out := make([]noteJSON, 0, len(notes))
-				for _, n := range notes {
-					out = append(out, noteJSON{
-						ID:        n.ID,
-						Text:      n.Content,
-						Timestamp: n.CreatedAt.Format(time.RFC3339),
-					})
-				}
+			for _, n := range notes {
+				out = append(out, noteJSON{
+					ID:        n.ID,
+					Text:      n.Content,
+					Timestamp: n.CreatedAt.Format(time.RFC3339),
+				})
+			}
 
-				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(map[string]interface{}{"notes": out})
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{"notes": out})
+			return
+		}
+
+		if r.Method == http.MethodPost {
+			var body struct {
+				Project string `json:"project"`
+				Text    string `json:"text"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Text == "" {
+				http.Error(w, "bad request", http.StatusBadRequest)
 				return
 			}
 
-			if r.Method == http.MethodPost {
-				var body struct {
-					Project string `json:"project"`
-					Text    string `json:"text"`
+			var projectID *int64
+			if body.Project != "" {
+				p, _ := database.GetProjectByName(body.Project)
+				if p != nil {
+					id := p.ID
+					projectID = &id
 				}
-				if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Text == "" {
-					http.Error(w, "bad request", http.StatusBadRequest)
-					return
-				}
+			}
 
-				var projectID *int64
-				if body.Project != "" {
-					p, _ := database.GetProjectByName(body.Project)
-					if p != nil {
-						id := p.ID
-						projectID = &id
-					}
-				}
-
-				noteID, err := database.InsertNote(db.Note{
-					ProjectID: projectID,
-					Content:   body.Text,
-				})
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-
-				type noteJSON struct {
-					ID        int64  `json:"id"`
-					Text      string `json:"text"`
-					Timestamp string `json:"timestamp"`
-				}
-
-				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(map[string]interface{}{
-					"note": noteJSON{
-						ID:        noteID,
-						Text:      body.Text,
-						Timestamp: time.Now().Format(time.RFC3339),
-					},
-				})
+			noteID, err := database.InsertNote(db.Note{
+				ProjectID: projectID,
+				Content:   body.Text,
+			})
+			if err != nil {
+				jsonResponse(w, http.StatusInternalServerError, "failed to insert note")
 				return
 			}
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"note": noteJSON{
+					ID:        noteID,
+					Text:      body.Text,
+					Timestamp: time.Now().Format(time.RFC3339),
+				},
+			})
+			return
+		}
 
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		})
@@ -158,7 +146,7 @@ var serveCmd = &cobra.Command{
 
 			result, err := capture.CaptureSession(database, body.Dir, "")
 			if err != nil {
-				http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+				jsonResponse(w, http.StatusInternalServerError, "capture failed")
 				return
 			}
 
@@ -195,7 +183,7 @@ var serveCmd = &cobra.Command{
 
 				prefs, err := database.ListPreferencesByProject(projectID)
 				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
+					jsonResponse(w, http.StatusInternalServerError, "failed to list preferences")
 					return
 				}
 
@@ -238,7 +226,7 @@ var serveCmd = &cobra.Command{
 					Confidence: confidence,
 				})
 				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
+					jsonResponse(w, http.StatusInternalServerError, "failed to insert preference")
 					return
 				}
 
@@ -278,17 +266,16 @@ var serveCmd = &cobra.Command{
 					Confidence *float64 `json:"confidence"`
 				}
 				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-					http.Error(w, `{"error":"bad request"}`, http.StatusBadRequest)
+					jsonResponse(w, http.StatusBadRequest, "bad request")
 					return
 				}
 
 				existing, err := database.GetPreference(id)
 				if err != nil {
-					http.Error(w, `{"error":"preference not found"}`, http.StatusNotFound)
+					jsonResponse(w, http.StatusNotFound, "preference not found")
 					return
 				}
 
-				// Build update fields
 				category := existing.Category
 				if body.Category != "" {
 					category = body.Category
@@ -306,12 +293,8 @@ var serveCmd = &cobra.Command{
 					confidence = *body.Confidence
 				}
 
-				_, err = database.Conn().Exec(
-					"UPDATE preferences SET category = ?, content = ?, source = ?, confidence = ?, updated_at = ? WHERE id = ?",
-					category, content, source, confidence, time.Now(), id,
-				)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
+				if err := database.UpdatePreference(id, category, content, source, confidence); err != nil {
+					jsonResponse(w, http.StatusInternalServerError, "failed to update preference")
 					return
 				}
 
@@ -321,9 +304,8 @@ var serveCmd = &cobra.Command{
 			}
 
 			if r.Method == http.MethodDelete {
-				_, err := database.Conn().Exec("DELETE FROM preferences WHERE id = ?", id)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
+				if err := database.DeletePreference(id); err != nil {
+					jsonResponse(w, http.StatusInternalServerError, "failed to delete preference")
 					return
 				}
 
@@ -379,6 +361,7 @@ var serveCmd = &cobra.Command{
 					case "session":
 						sessions, err := database.SearchSessions(body.Query)
 						if err != nil {
+							fmt.Fprintf(os.Stderr, "search sessions: %v\n", err)
 							continue
 						}
 						for _, s := range sessions {
@@ -392,6 +375,7 @@ var serveCmd = &cobra.Command{
 					case "note":
 						notes, err := database.SearchNotes(body.Query)
 						if err != nil {
+							fmt.Fprintf(os.Stderr, "search notes: %v\n", err)
 							continue
 						}
 						for _, n := range notes {
@@ -405,6 +389,7 @@ var serveCmd = &cobra.Command{
 					case "preference":
 						prefs, err := database.SearchPreferences(body.Query)
 						if err != nil {
+							fmt.Fprintf(os.Stderr, "search preferences: %v\n", err)
 							continue
 						}
 						for _, p := range prefs {
@@ -480,32 +465,28 @@ var serveCmd = &cobra.Command{
 
 			// Pass 2: Semantic recall (if ollama available)
 			var recallResults []nctx.RecallResult
-			ollamaAvailable := true
-			_, err = ollamaClient.Embed(r.Context(), body.TaskDesc)
-			if err != nil {
-				ollamaAvailable = false
-			} else {
-				vec, vecErr := ollamaClient.Embed(r.Context(), body.TaskDesc)
-				if vecErr == nil {
-					for _, typ := range []string{"session", "note", "preference"} {
-						similar, sErr := database.SearchSimilar(vec, typ, 3, 0.7)
-						if sErr != nil {
-							continue
-						}
-						for _, s := range similar {
-							recallResults = append(recallResults, nctx.RecallResult{
-								SourceType: s.SourceType,
-								SourceID:   s.SourceID,
-								Content:    s.Content,
-								Score:      s.Score,
-							})
-						}
+			vec, err := ollamaClient.Embed(r.Context(), body.TaskDesc)
+			ollamaAvailable := err == nil
+			if ollamaAvailable {
+				for _, typ := range []string{"session", "note", "preference"} {
+					similar, sErr := database.SearchSimilar(vec, typ, 3, 0.7)
+					if sErr != nil {
+						fmt.Fprintf(os.Stderr, "search similar %s: %v\n", typ, sErr)
+						continue
+					}
+					for _, s := range similar {
+						recallResults = append(recallResults, nctx.RecallResult{
+							SourceType: s.SourceType,
+							SourceID:   s.SourceID,
+							Content:    s.Content,
+							Score:      s.Score,
+						})
 					}
 				}
 			}
 
 			// Pass 3: Preferences
-				prefs, _ := database.ListPreferencesByProject(&project.ID)
+			prefs, _ := database.ListPreferencesByProject(&project.ID)
 
 			ctxOutput := nctx.BuildContext(nctx.ContextOptions{
 				Project:         project,
@@ -559,7 +540,8 @@ var serveCmd = &cobra.Command{
 				)
 			`).Scan(&queueDepth)
 			if err != nil {
-				queueDepth = -1
+				jsonResponse(w, http.StatusInternalServerError, "failed to get embed status")
+				return
 			}
 
 			w.Header().Set("Content-Type", "application/json")
@@ -576,17 +558,22 @@ var serveCmd = &cobra.Command{
 
 		// Graceful shutdown
 		srv := &http.Server{Addr: addr, Handler: mux}
+		errCh := make(chan error, 1)
 		go func() {
 			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				fmt.Fprintf(os.Stderr, "serve: %v\n", err)
-				os.Exit(1)
+				errCh <- err
 			}
 		}()
 
 		quit := make(chan os.Signal, 1)
 		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-		<-quit
-		fmt.Println("\nShutting down Nexus API...")
+		select {
+		case <-quit:
+			fmt.Println("\nShutting down Nexus API...")
+		case err := <-errCh:
+			fmt.Fprintf(os.Stderr, "serve: %v\n", err)
+			return err
+		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -595,6 +582,19 @@ var serveCmd = &cobra.Command{
 }
 
 const embedPollIntervalSecs = 30
+
+type noteJSON struct {
+	ID        int64  `json:"id"`
+	Text      string `json:"text"`
+	Timestamp string `json:"timestamp"`
+}
+
+// jsonResponse writes a JSON error response safely
+func jsonResponse(w http.ResponseWriter, code int, msg string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(map[string]interface{}{"error": msg})
+}
 
 func init() {
 	serveCmd.Flags().Int("port", 7600, "Port to listen on")

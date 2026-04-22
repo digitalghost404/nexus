@@ -213,6 +213,25 @@ func (d *DB) DeleteSupersededPreferences(olderThanDays int) (int64, error) {
 	return result.RowsAffected()
 }
 
+func (d *DB) UpdatePreference(id int64, category, content, source string, confidence float64) error {
+	_, err := d.db.Exec(
+		"UPDATE preferences SET category = ?, content = ?, source = ?, confidence = ?, updated_at = ? WHERE id = ?",
+		category, content, source, confidence, time.Now(), id,
+	)
+	if err != nil {
+		return fmt.Errorf("update preference: %w", err)
+	}
+	return nil
+}
+
+func (d *DB) DeletePreference(id int64) error {
+	_, err := d.db.Exec("DELETE FROM preferences WHERE id = ?", id)
+	if err != nil {
+		return fmt.Errorf("delete preference: %w", err)
+	}
+	return nil
+}
+
 func scanPreferences(rows *sql.Rows) ([]Preference, error) {
 	var prefs []Preference
 	for rows.Next() {
