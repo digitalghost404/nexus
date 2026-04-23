@@ -35,8 +35,12 @@ func TestUnlinkProjects(t *testing.T) {
 	id1, _ := d.UpsertProject(Project{Name: "a", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 	id2, _ := d.UpsertProject(Project{Name: "b", Path: "/b", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 
-	d.LinkProjects(id1, id2)
-	d.UnlinkProjects(id1, id2)
+	if err := d.LinkProjects(id1, id2); err != nil {
+		t.Fatalf("LinkProjects: %v", err)
+	}
+	if err := d.UnlinkProjects(id1, id2); err != nil {
+		t.Fatalf("UnlinkProjects: %v", err)
+	}
 
 	linked, _ := d.GetLinkedProjects(id1)
 	if len(linked) != 0 {

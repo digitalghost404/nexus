@@ -15,7 +15,7 @@ func testDB(t *testing.T) *DB {
 	if err != nil {
 		t.Fatalf("open test db: %v", err)
 	}
-	t.Cleanup(func() { d.Close() })
+	t.Cleanup(func() { _ = d.Close() })
 	return d
 }
 
@@ -27,7 +27,7 @@ func TestOpenCreatesDatabase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open failed: %v", err)
 	}
-	defer d.Close()
+	defer func() { _ = d.Close() }()
 
 	var count int
 	err = d.db.QueryRow("SELECT count(*) FROM projects").Scan(&count)
@@ -54,10 +54,12 @@ func TestOpenSetsWALMode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open failed: %v", err)
 	}
-	defer d.Close()
+	defer func() { _ = d.Close() }()
 
 	var mode string
-	d.db.QueryRow("PRAGMA journal_mode").Scan(&mode)
+	if err := d.db.QueryRow("PRAGMA journal_mode").Scan(&mode); err != nil {
+		t.Fatalf("query journal_mode: %v", err)
+	}
 	if mode != "wal" {
 		t.Errorf("expected WAL mode, got: %s", mode)
 	}
@@ -71,10 +73,12 @@ func TestSchemaVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open failed: %v", err)
 	}
-	defer d.Close()
+	defer func() { _ = d.Close() }()
 
 	var version int
-	d.db.QueryRow("PRAGMA user_version").Scan(&version)
+	if err := d.db.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
+		t.Fatalf("query user_version: %v", err)
+	}
 	if version != 5 {
 		t.Errorf("expected user_version=5, got: %d", version)
 	}
@@ -86,20 +90,20 @@ func TestMigrationV1ToV2(t *testing.T) {
 
 	// Create a v1 database manually
 	sqlDB, _ := sql.Open("sqlite", dbPath)
-	sqlDB.Exec("PRAGMA journal_mode=WAL")
-	sqlDB.Exec(schemaSQL) // current schema
-	sqlDB.Exec("PRAGMA user_version = 1")
+	_, _ = sqlDB.Exec("PRAGMA journal_mode=WAL")
+	_, _ = sqlDB.Exec(schemaSQL) // current schema
+	_, _ = sqlDB.Exec("PRAGMA user_version = 1")
 
 	// Insert some v1 data
-	sqlDB.Exec("INSERT INTO projects (name, path, status, discovered_at) VALUES ('test', '/test', 'active', datetime('now'))")
-	sqlDB.Close()
+	_, _ = sqlDB.Exec("INSERT INTO projects (name, path, status, discovered_at) VALUES ('test', '/test', 'active', datetime('now'))")
+	_ = sqlDB.Close()
 
 	// Open with new migration code
 	d, err := Open(dbPath)
 	if err != nil {
 		t.Fatalf("Open with migration failed: %v", err)
 	}
-	defer d.Close()
+	defer func() { _ = d.Close() }()
 
 	// Verify v2 tables exist
 	var count int
@@ -120,14 +124,18 @@ func TestMigrationV1ToV2(t *testing.T) {
 
 	// Verify version is now 5 (v1 migrates through v2, v3, v4, and v5)
 	var version int
-	d.db.QueryRow("PRAGMA user_version").Scan(&version)
+	if err := d.db.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
+		t.Fatalf("query user_version: %v", err)
+	}
 	if version != 5 {
 		t.Errorf("expected user_version=5, got %d", version)
 	}
 
 	// Verify existing data survived
 	var projName string
-	d.db.QueryRow("SELECT name FROM projects WHERE path = '/test'").Scan(&projName)
+	if err := d.db.QueryRow("SELECT name FROM projects WHERE path = '/test'").Scan(&projName); err != nil {
+		t.Fatalf("query project name: %v", err)
+	}
 	if projName != "test" {
 		t.Errorf("existing data lost during migration")
 	}
@@ -139,25 +147,27 @@ func TestMigrationV4ToV5(t *testing.T) {
 
 	// Create a v4 database
 	sqlDB, _ := sql.Open("sqlite", dbPath)
-	sqlDB.Exec("PRAGMA journal_mode=WAL")
-	sqlDB.Exec(schemaSQL)
-	sqlDB.Exec(migrationV4SQL)
-	sqlDB.Exec("PRAGMA user_version = 4")
+	_, _ = sqlDB.Exec("PRAGMA journal_mode=WAL")
+	_, _ = sqlDB.Exec(schemaSQL)
+	_, _ = sqlDB.Exec(migrationV4SQL)
+	_, _ = sqlDB.Exec("PRAGMA user_version = 4")
 
 	// Insert a project so we can verify data survives migration
-	sqlDB.Exec("INSERT INTO projects (name, path, status, discovered_at) VALUES ('testproj', '/testproj', 'active', datetime('now'))")
-	sqlDB.Close()
+	_, _ = sqlDB.Exec("INSERT INTO projects (name, path, status, discovered_at) VALUES ('testproj', '/testproj', 'active', datetime('now'))")
+	_ = sqlDB.Close()
 
 	// Open with new migration code
 	d, err := Open(dbPath)
 	if err != nil {
 		t.Fatalf("Open with migration failed: %v", err)
 	}
-	defer d.Close()
+	defer func() { _ = d.Close() }()
 
 	// Verify version is 5
 	var version int
-	d.db.QueryRow("PRAGMA user_version").Scan(&version)
+	if err := d.db.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
+		t.Fatalf("query user_version: %v", err)
+	}
 	if version != 5 {
 		t.Errorf("expected user_version=5, got %d", version)
 	}
@@ -189,7 +199,9 @@ func TestMigrationV4ToV5(t *testing.T) {
 
 	// Verify existing project data survived migration
 	var projName string
-	d.db.QueryRow("SELECT name FROM projects WHERE path = '/testproj'").Scan(&projName)
+	if err := d.db.QueryRow("SELECT name FROM projects WHERE path = '/testproj'").Scan(&projName); err != nil {
+		t.Fatalf("query project name: %v", err)
+	}
 	if projName != "testproj" {
 		t.Errorf("existing data lost during migration")
 	}
@@ -199,7 +211,7 @@ func TestMigrationV4ToV5(t *testing.T) {
 	if err != nil {
 		t.Errorf("preferences table missing expected columns: %v", err)
 	} else {
-		rows.Close()
+		defer rows.Close()
 	}
 
 	// Verify embedding_meta table has correct columns
@@ -207,7 +219,7 @@ func TestMigrationV4ToV5(t *testing.T) {
 	if err != nil {
 		t.Errorf("embedding_meta table missing expected columns: %v", err)
 	} else {
-		rows.Close()
+		defer rows.Close()
 	}
 
 	// Verify embeddings table has correct columns
@@ -215,6 +227,6 @@ func TestMigrationV4ToV5(t *testing.T) {
 	if err != nil {
 		t.Errorf("embeddings table missing expected columns: %v", err)
 	} else {
-		rows.Close()
+		defer rows.Close()
 	}
 }

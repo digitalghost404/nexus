@@ -27,7 +27,7 @@ func (d *DB) StoreEmbedding(sourceType string, sourceID int64, content string, v
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	result, err := tx.Exec("INSERT INTO embeddings (embedding) VALUES (?)", blob)
 	if err != nil {

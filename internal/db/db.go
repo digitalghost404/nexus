@@ -42,14 +42,14 @@ func Open(path string) (*DB, error) {
 	}
 
 	if _, err := sqlDB.Exec("PRAGMA journal_mode=WAL"); err != nil {
-		sqlDB.Close()
+		_ = sqlDB.Close()
 		return nil, fmt.Errorf("set WAL mode: %w", err)
 	}
 
 	d := &DB{db: sqlDB}
 
 	if err := d.migrate(); err != nil {
-		sqlDB.Close()
+		_ = sqlDB.Close()
 		return nil, fmt.Errorf("migrate: %w", err)
 	}
 
@@ -152,9 +152,9 @@ func migrateLegacyData(newPath string) {
 		return
 	}
 
-	moveFile(legacyDB, filepath.Join(newDir, "nexus.db"))
-	moveFile(legacyCfg, filepath.Join(newDir, "config.yaml"))
-	moveFile(legacyLog, filepath.Join(newDir, "nexus.log"))
+	_ = moveFile(legacyDB, filepath.Join(newDir, "nexus.db"))
+	_ = moveFile(legacyCfg, filepath.Join(newDir, "config.yaml"))
+	_ = moveFile(legacyLog, filepath.Join(newDir, "nexus.log"))
 }
 
 func fileExists(path string) bool {

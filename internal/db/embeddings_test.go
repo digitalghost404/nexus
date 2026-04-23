@@ -113,7 +113,9 @@ func TestSearchSimilarWithMinScore(t *testing.T) {
 	sID, _ := d.InsertSession(s)
 
 	vec := []float64{0.0, 1.0, 0.0}
-	d.StoreEmbedding("session", sID, "test", vec, "nomic-embed-text", false)
+	if err := d.StoreEmbedding("session", sID, "test", vec, "nomic-embed-text", false); err != nil {
+		t.Fatalf("StoreEmbedding: %v", err)
+	}
 
 	queryVec := []float64{1.0, 0.0, 0.0}
 	results, err := d.SearchSimilar(queryVec, "session", 5, 0.99)
@@ -136,7 +138,9 @@ func TestSearchSimilarLimit(t *testing.T) {
 		s := Session{ProjectID: projID, Summary: "test", Source: "test"}
 		sID, _ := d.InsertSession(s)
 		vec := []float64{0.2, 0.2, 0.2}
-		d.StoreEmbedding("session", sID, "test", vec, "nomic-embed-text", false)
+		if err := d.StoreEmbedding("session", sID, "test", vec, "nomic-embed-text", false); err != nil {
+			t.Fatalf("StoreEmbedding %d: %v", i, err)
+		}
 	}
 
 	results, err := d.SearchSimilar([]float64{0.2, 0.2, 0.2}, "session", 2, 0.0)
@@ -177,8 +181,12 @@ func TestSearchSimilarSourceTypeFilter(t *testing.T) {
 	}
 
 	vec := []float64{0.5, 0.5, 0.0}
-	d.StoreEmbedding("session", sID, "session test", vec, "nomic-embed-text", false)
-	d.StoreEmbedding("note", nID, "note test", vec, "nomic-embed-text", false)
+	if err := d.StoreEmbedding("session", sID, "session test", vec, "nomic-embed-text", false); err != nil {
+		t.Fatalf("StoreEmbedding session: %v", err)
+	}
+	if err := d.StoreEmbedding("note", nID, "note test", vec, "nomic-embed-text", false); err != nil {
+		t.Fatalf("StoreEmbedding note: %v", err)
+	}
 
 	sessionResults, _ := d.SearchSimilar(vec, "session", 5, 0.0)
 	noteResults, _ := d.SearchSimilar(vec, "note", 5, 0.0)
