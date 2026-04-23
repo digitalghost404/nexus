@@ -135,6 +135,66 @@ func (d *DB) ArchiveProject(id int64) error {
 	return err
 }
 
+func (d *DB) DeleteProject(name string) (int, error) {
+	var id int64
+	err := d.db.QueryRow("SELECT id FROM projects WHERE name = ?", name).Scan(&id)
+	if err != nil {
+		return 0, fmt.Errorf("get project id: %w", err)
+	}
+
+	tx, err := d.db.Begin()
+	if err != nil {
+		return 0, fmt.Errorf("begin tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	_, err = tx.Exec("DELETE FROM session_conversations WHERE session_id IN (SELECT id FROM sessions WHERE project_id = ?)", id)
+	if err != nil {
+		return 0, fmt.Errorf("delete conversations: %w", err)
+	}
+	_, err = tx.Exec("DELETE FROM session_tags WHERE session_id IN (SELECT id FROM sessions WHERE project_id = ?)", id)
+	if err != nil {
+		return 0, fmt.Errorf("delete session tags: %w", err)
+	}
+	_, err = tx.Exec("DELETE FROM embedding_meta WHERE source_type IN ('session', 'note') AND source_id IN (SELECT id FROM sessions WHERE project_id = ?) OR source_id IN (SELECT id FROM notes WHERE project_id = ?)", id, id)
+	if err != nil {
+		return 0, fmt.Errorf("delete embedding meta: %w", err)
+	}
+	_, err = tx.Exec("DELETE FROM embeddings WHERE id IN (SELECT id FROM embedding_meta WHERE source_type IN ('session', 'note') AND source_id IN (SELECT id FROM sessions WHERE project_id = ?) OR source_id IN (SELECT id FROM notes WHERE project_id = ?))", id, id)
+	if err != nil {
+		return 0, fmt.Errorf("delete embeddings: %w", err)
+	}
+	_, err = tx.Exec("DELETE FROM sessions WHERE project_id = ?", id)
+	if err != nil {
+		return 0, fmt.Errorf("delete sessions: %w", err)
+	}
+
+	result, err := tx.Exec("DELETE FROM notes WHERE project_id = ?", id)
+	if err != nil {
+		return 0, fmt.Errorf("delete notes: %w", err)
+	}
+	notesDeleted, _ := result.RowsAffected()
+
+	_, err = tx.Exec("DELETE FROM preferences WHERE project_id = ?", id)
+	if err != nil {
+		return 0, fmt.Errorf("delete preferences: %w", err)
+	}
+	_, err = tx.Exec("DELETE FROM project_links WHERE project_id = ? OR linked_project_id = ?", id, id)
+	if err != nil {
+		return 0, fmt.Errorf("delete project links: %w", err)
+	}
+	_, err = tx.Exec("DELETE FROM projects WHERE id = ?", id)
+	if err != nil {
+		return 0, fmt.Errorf("delete project: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("commit: %w", err)
+	}
+
+	return int(notesDeleted), nil
+}
+
 func (d *DB) ListDirtyProjects() ([]Project, error) {
 	rows, err := d.db.Query(`
 		SELECT id, name, path, languages, branch, dirty, dirty_files,
