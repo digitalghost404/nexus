@@ -261,16 +261,16 @@ func truncate(s string, max int) string {
 }
 
 func FormatResume(w io.Writer, s *db.Session, dirtyFiles []string, digestJSON string) {
-	fmt.Fprintf(w, "\n┌ RESUME: %s ────────────────────────────\n│\n", s.ProjectName)
+	_, _ = fmt.Fprintf(w, "\n┌ RESUME: %s ────────────────────────────\n│\n", s.ProjectName)
 
 	if s.StartedAt != nil {
 		duration := ""
 		if s.DurationSecs > 0 {
 			duration = fmt.Sprintf(" (%s)", formatDuration(s.DurationSecs))
 		}
-		fmt.Fprintf(w, "│  Last session: %s%s\n", RelativeTime(*s.StartedAt), duration)
+		_, _ = fmt.Fprintf(w, "│  Last session: %s%s\n", RelativeTime(*s.StartedAt), duration)
 	}
-	fmt.Fprintf(w, "│  Summary: \"%s\"\n", s.Summary)
+	_, _ = fmt.Fprintf(w, "│  Summary: \"%s\"\n", s.Summary)
 
 	// Parse and show commits
 	type commitEntry struct {
@@ -280,9 +280,9 @@ func FormatResume(w io.Writer, s *db.Session, dirtyFiles []string, digestJSON st
 	var commits []commitEntry
 	json.Unmarshal([]byte(s.CommitsMade), &commits) //nolint:errcheck
 	if len(commits) > 0 {
-		fmt.Fprintf(w, "│\n│  Commits:\n")
+		_, _ = fmt.Fprintf(w, "│\n│  Commits:\n")
 		for _, c := range commits {
-			fmt.Fprintf(w, "│    %s  %s\n", c.Hash, c.Message)
+			_, _ = fmt.Fprintf(w, "│    %s  %s\n", c.Hash, c.Message)
 		}
 	}
 
@@ -290,27 +290,27 @@ func FormatResume(w io.Writer, s *db.Session, dirtyFiles []string, digestJSON st
 	var files []string
 	json.Unmarshal([]byte(s.FilesChanged), &files) //nolint:errcheck
 	if len(files) > 0 {
-		fmt.Fprintf(w, "│\n│  Files changed:\n│    %s\n", strings.Join(files, ", "))
+		_, _ = fmt.Fprintf(w, "│\n│  Files changed:\n│    %s\n", strings.Join(files, ", "))
 	}
 
 	if digestJSON != "" {
-		fmt.Fprintf(w, "│\n│  Conversation:\n")
+		_, _ = fmt.Fprintf(w, "│\n│  Conversation:\n")
 		FormatConversationDigest(w, digestJSON, "│    ")
 	}
 
 	// Dirty files from live git status
 	if len(dirtyFiles) > 0 {
-		fmt.Fprintf(w, "│\n│  Uncommitted changes: %d files\n", len(dirtyFiles))
+		_, _ = fmt.Fprintf(w, "│\n│  Uncommitted changes: %d files\n", len(dirtyFiles))
 		for _, f := range dirtyFiles {
-			fmt.Fprintf(w, "│    %s\n", f)
+			_, _ = fmt.Fprintf(w, "│    %s\n", f)
 		}
 	}
 
-	fmt.Fprintf(w, "│\n└────────────────────────────────────────────\n\n")
+	_, _ = fmt.Fprintf(w, "│\n└────────────────────────────────────────────\n\n")
 }
 
 func FormatDiff(w io.Writer, projectName string, since string, sessions []db.Session) {
-	fmt.Fprintf(w, "\n┌ DIFF: %s (last %s) ────────────────\n│\n", projectName, since)
+	_, _ = fmt.Fprintf(w, "\n┌ DIFF: %s (last %s) ────────────────\n│\n", projectName, since)
 
 	// Aggregate stats
 	totalCommits := 0
@@ -327,21 +327,21 @@ func FormatDiff(w io.Writer, projectName string, since string, sessions []db.Ses
 		}
 	}
 
-	fmt.Fprintf(w, "│  %d sessions, %d commits, %d files touched\n│\n", len(sessions), totalCommits, len(fileSet))
+	_, _ = fmt.Fprintf(w, "│  %d sessions, %d commits, %d files touched\n│\n", len(sessions), totalCommits, len(fileSet))
 
 	// Timeline
-	fmt.Fprintf(w, "│  Timeline:\n")
+	_, _ = fmt.Fprintf(w, "│  Timeline:\n")
 	for _, s := range sessions {
 		dateStr := ""
 		if s.StartedAt != nil {
 			dateStr = s.StartedAt.Format("Jan 02")
 		}
-		fmt.Fprintf(w, "│    %-8s \"%s\"\n", dateStr, truncate(s.Summary, 50))
+		_, _ = fmt.Fprintf(w, "│    %-8s \"%s\"\n", dateStr, truncate(s.Summary, 50))
 	}
 
 	// Most active files (top 5)
 	if len(fileSet) > 0 {
-		fmt.Fprintf(w, "│\n│  Most active files:\n")
+		_, _ = fmt.Fprintf(w, "│\n│  Most active files:\n")
 		type fileCount struct {
 			path  string
 			count int
@@ -363,52 +363,52 @@ func FormatDiff(w io.Writer, projectName string, since string, sessions []db.Ses
 			limit = len(sorted)
 		}
 		for _, fc := range sorted[:limit] {
-			fmt.Fprintf(w, "│    %-40s (modified in %d sessions)\n", fc.path, fc.count)
+			_, _ = fmt.Fprintf(w, "│    %-40s (modified in %d sessions)\n", fc.path, fc.count)
 		}
 	}
 
-	fmt.Fprintf(w, "│\n└────────────────────────────────────────────\n\n")
+	_, _ = fmt.Fprintf(w, "│\n└────────────────────────────────────────────\n\n")
 }
 
 func FormatReport(w io.Writer, r ReportData) {
-	fmt.Fprintf(w, "\n┌ REPORT: %s – %s ──────────────────\n│\n", r.StartDate, r.EndDate)
+	_, _ = fmt.Fprintf(w, "\n┌ REPORT: %s – %s ──────────────────\n│\n", r.StartDate, r.EndDate)
 
-	fmt.Fprintf(w, "│  %d sessions across %d projects\n", r.TotalSessions, r.TotalProjects)
-	fmt.Fprintf(w, "│  %d commits, %d files changed\n", r.TotalCommits, r.TotalFiles)
-	fmt.Fprintf(w, "│  ~%.1f hours of Claude sessions\n", r.TotalHours)
+	_, _ = fmt.Fprintf(w, "│  %d sessions across %d projects\n", r.TotalSessions, r.TotalProjects)
+	_, _ = fmt.Fprintf(w, "│  %d commits, %d files changed\n", r.TotalCommits, r.TotalFiles)
+	_, _ = fmt.Fprintf(w, "│  ~%.1f hours of Claude sessions\n", r.TotalHours)
 
 	if len(r.TopProjects) > 0 {
-		fmt.Fprintf(w, "│\n│  Most active projects:\n")
+		_, _ = fmt.Fprintf(w, "│\n│  Most active projects:\n")
 		for _, p := range r.TopProjects {
-			fmt.Fprintf(w, "│    %-16s %d sessions, %d commits\n", p.Name, p.Sessions, p.Commits)
+			_, _ = fmt.Fprintf(w, "│    %-16s %d sessions, %d commits\n", p.Name, p.Sessions, p.Commits)
 		}
 	}
 
 	if len(r.Languages) > 0 {
-		fmt.Fprintf(w, "│\n│  Languages:\n│    ")
+		_, _ = fmt.Fprintf(w, "│\n│  Languages:\n│    ")
 		parts := make([]string, len(r.Languages))
 		for i, l := range r.Languages {
 			parts[i] = fmt.Sprintf("%s %d%%", l.Lang, l.Percent)
 		}
-		fmt.Fprintf(w, "%s\n", strings.Join(parts, "  "))
+		_, _ = fmt.Fprintf(w, "%s\n", strings.Join(parts, "  "))
 	}
 
 	if len(r.Highlights) > 0 {
-		fmt.Fprintf(w, "│\n│  Highlights:\n")
+		_, _ = fmt.Fprintf(w, "│\n│  Highlights:\n")
 		for _, h := range r.Highlights {
-			fmt.Fprintf(w, "│    \"%s\"\n", truncate(h, 60))
+			_, _ = fmt.Fprintf(w, "│    \"%s\"\n", truncate(h, 60))
 		}
 	}
 
-	fmt.Fprintf(w, "│\n└────────────────────────────────────────────\n\n")
+	_, _ = fmt.Fprintf(w, "│\n└────────────────────────────────────────────\n\n")
 }
 
 func FormatStreak(w io.Writer, current, longest int, longestStart, longestEnd string, thisWeek, lastWeek []bool) {
-	fmt.Fprintf(w, "\nCurrent streak: %d days\n", current)
-	fmt.Fprintf(w, "Longest streak: %d days (%s – %s)\n", longest, longestStart, longestEnd)
+	_, _ = fmt.Fprintf(w, "\nCurrent streak: %d days\n", current)
+	_, _ = fmt.Fprintf(w, "Longest streak: %d days (%s – %s)\n", longest, longestStart, longestEnd)
 
-	fmt.Fprintf(w, "\nThis week: %s  %d/7 days\n", weekBar(thisWeek), countTrue(thisWeek))
-	fmt.Fprintf(w, "Last week: %s  %d/7 days\n\n", weekBar(lastWeek), countTrue(lastWeek))
+	_, _ = fmt.Fprintf(w, "\nThis week: %s  %d/7 days\n", weekBar(thisWeek), countTrue(thisWeek))
+	_, _ = fmt.Fprintf(w, "Last week: %s  %d/7 days\n\n", weekBar(lastWeek), countTrue(lastWeek))
 }
 
 func FormatWhere(w io.Writer, results []WhereResult) {
@@ -459,15 +459,15 @@ func FormatConversationDigest(w io.Writer, digestJSON string, prefix string) {
 		}
 	}
 	if len(questions) > 0 {
-		fmt.Fprintf(w, "%sDiscussed:\n", prefix)
+		_, _ = fmt.Fprintf(w, "%sDiscussed:\n", prefix)
 		for _, q := range questions {
-			fmt.Fprintf(w, "%s  - \"%s\"\n", prefix, q)
+			_, _ = fmt.Fprintf(w, "%s  - \"%s\"\n", prefix, q)
 		}
 	}
 
 	// Files
 	if len(d.FilesTouched) > 0 {
-		fmt.Fprintf(w, "%sFiles: %s\n", prefix, strings.Join(d.FilesTouched, ", "))
+		_, _ = fmt.Fprintf(w, "%sFiles: %s\n", prefix, strings.Join(d.FilesTouched, ", "))
 	}
 
 	// Commands
@@ -478,36 +478,36 @@ func FormatConversationDigest(w io.Writer, digestJSON string, prefix string) {
 		}
 	}
 	if len(cmds) > 0 {
-		fmt.Fprintf(w, "%sCommands: %s\n", prefix, strings.Join(cmds, "; "))
+		_, _ = fmt.Fprintf(w, "%sCommands: %s\n", prefix, strings.Join(cmds, "; "))
 	}
 
 	// Errors
 	if len(d.Errors) > 0 {
-		fmt.Fprintf(w, "%sErrors:\n", prefix)
+		_, _ = fmt.Fprintf(w, "%sErrors:\n", prefix)
 		for _, e := range d.Errors {
-			fmt.Fprintf(w, "%s  - %s\n", prefix, truncate(e, 80))
+			_, _ = fmt.Fprintf(w, "%s  - %s\n", prefix, truncate(e, 80))
 		}
 	}
 }
 
 func FormatContext(w io.Writer, p *db.Project, sessions []db.Session, notes []db.Note, linkedProjects []db.Project, digests map[int64]string) {
-	fmt.Fprintf(w, "## Project: %s\n", p.Name)
-	fmt.Fprintf(w, "Path: %s\n", p.Path)
+	_, _ = fmt.Fprintf(w, "## Project: %s\n", p.Name)
+	_, _ = fmt.Fprintf(w, "Path: %s\n", p.Path)
 
 	branchInfo := p.Branch
 	if p.Dirty {
 		branchInfo += fmt.Sprintf(" (%d files dirty)", p.DirtyFiles)
 	}
-	fmt.Fprintf(w, "Branch: %s\n", branchInfo)
+	_, _ = fmt.Fprintf(w, "Branch: %s\n", branchInfo)
 
 	if p.Languages != "" && p.Languages != "[]" {
 		var langs []string
 		json.Unmarshal([]byte(p.Languages), &langs) //nolint:errcheck
-		fmt.Fprintf(w, "Languages: %s\n", strings.Join(langs, ", "))
+		_, _ = fmt.Fprintf(w, "Languages: %s\n", strings.Join(langs, ", "))
 	}
 
 	if len(sessions) > 0 {
-		fmt.Fprintf(w, "\n## Recent Sessions (last 7 days)\n")
+		_, _ = fmt.Fprintf(w, "\n## Recent Sessions (last 7 days)\n")
 		for _, s := range sessions {
 			dateStr := ""
 			if s.StartedAt != nil {
@@ -515,7 +515,7 @@ func FormatContext(w io.Writer, p *db.Project, sessions []db.Session, notes []db
 			}
 			var commits []struct{ Hash, Message string }
 			json.Unmarshal([]byte(s.CommitsMade), &commits) //nolint:errcheck
-			fmt.Fprintf(w, "- %s: \"%s\" (%d commits)\n", dateStr, s.Summary, len(commits))
+			_, _ = fmt.Fprintf(w, "- %s: \"%s\" (%d commits)\n", dateStr, s.Summary, len(commits))
 			if digestJSON, ok := digests[s.ID]; ok {
 				FormatConversationDigest(w, digestJSON, "  ")
 			}
@@ -523,37 +523,37 @@ func FormatContext(w io.Writer, p *db.Project, sessions []db.Session, notes []db
 	}
 
 	if len(notes) > 0 {
-		fmt.Fprintf(w, "\n## Notes\n")
+		_, _ = fmt.Fprintf(w, "\n## Notes\n")
 		for _, n := range notes {
-			fmt.Fprintf(w, "- \"%s\"\n", n.Content)
+			_, _ = fmt.Fprintf(w, "- \"%s\"\n", n.Content)
 		}
 	}
 
 	if len(linkedProjects) > 0 {
-		fmt.Fprintf(w, "\n## Linked Projects\n")
+		_, _ = fmt.Fprintf(w, "\n## Linked Projects\n")
 		for _, lp := range linkedProjects {
-			fmt.Fprintf(w, "- %s\n", lp.Name)
+			_, _ = fmt.Fprintf(w, "- %s\n", lp.Name)
 		}
 	}
 	_, _ = fmt.Fprintln(w)
 }
 
 func FormatDeps(w io.Writer, results []ProjectDeps, cleanCount int) {
-	fmt.Fprintf(w, "\n┌ DEPENDENCIES ──────────────────────────────\n│\n")
+	_, _ = fmt.Fprintf(w, "\n┌ DEPENDENCIES ──────────────────────────────\n│\n")
 
 	for _, pd := range results {
-		fmt.Fprintf(w, "│  %s (%s)\n", pd.ProjectName, pd.Manager)
+		_, _ = fmt.Fprintf(w, "│  %s (%s)\n", pd.ProjectName, pd.Manager)
 		for _, d := range pd.Outdated {
-			fmt.Fprintf(w, "│    %-40s %s → %s\n", d.Name, d.Current, d.Available)
+			_, _ = fmt.Fprintf(w, "│    %-40s %s → %s\n", d.Name, d.Current, d.Available)
 		}
-		fmt.Fprintf(w, "│\n")
+		_, _ = fmt.Fprintf(w, "│\n")
 	}
 
 	if cleanCount > 0 {
-		fmt.Fprintf(w, "│  %d projects clean\n│\n", cleanCount)
+		_, _ = fmt.Fprintf(w, "│  %d projects clean\n│\n", cleanCount)
 	}
 
-	fmt.Fprintf(w, "└────────────────────────────────────────────\n\n")
+	_, _ = fmt.Fprintf(w, "└────────────────────────────────────────────\n\n")
 }
 
 func FormatStale(w io.Writer, branches map[string][]StaleBranchInfo, dirtyDetails map[string][]string) {
