@@ -23,7 +23,7 @@ var tagCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		var sessionID int64
 		var label string

@@ -177,13 +177,13 @@ func FormatProjectDetail(w io.Writer, p *db.Project, sessions []db.Session, stal
 	}
 
 	if p.Ahead > 0 || p.Behind > 0 {
-		fmt.Fprintf(w, "│  Remote:    %d ahead, %d behind\n", p.Ahead, p.Behind)
+		_, _ = fmt.Fprintf(w, "│  Remote:    %d ahead, %d behind\n", p.Ahead, p.Behind)
 	}
 
 	if len(linkedProjects) > 0 {
-		fmt.Fprintf(w, "│\n│  Linked Projects\n")
+		_, _ = fmt.Fprintf(w, "│\n│  Linked Projects\n")
 		for _, lp := range linkedProjects {
-			fmt.Fprintf(w, "│  %s  %s\n", lp.Name, lp.Path)
+			_, _ = fmt.Fprintf(w, "│  %s  %s\n", lp.Name, lp.Path)
 		}
 	}
 

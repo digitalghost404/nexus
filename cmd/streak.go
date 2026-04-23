@@ -20,7 +20,7 @@ var streakCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		dates, err := database.GetDistinctSessionDates()
 		if err != nil {
