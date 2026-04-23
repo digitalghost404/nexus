@@ -133,7 +133,7 @@ func (d *DB) SearchSessions(query string) ([]Session, error) {
 	if err != nil {
 		return nil, fmt.Errorf("search sessions: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var sessions []Session
 	for rows.Next() {
@@ -190,7 +190,7 @@ func (d *DB) GetSessionsInRange(projectID int64, since, until time.Time) ([]Sess
 	if err != nil {
 		return nil, fmt.Errorf("sessions in range: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var sessions []Session
 	for rows.Next() {
@@ -222,7 +222,7 @@ func (d *DB) GetDistinctSessionDates() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("distinct dates: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var dates []string
 	for rows.Next() {

@@ -167,7 +167,7 @@ func TestGetDistinctSessionDates(t *testing.T) {
 	day2 := now.Add(-24 * time.Hour)
 	_, _ = d.InsertSession(Session{ProjectID: pID, Summary: "s1", Source: "wrapper", StartedAt: &day1})
 	_, _ = d.InsertSession(Session{ProjectID: pID, Summary: "s2", Source: "wrapper", StartedAt: &day2})
-	d.InsertSession(Session{ProjectID: pID, Summary: "s3", Source: "wrapper", StartedAt: &now})
+	_, _ = d.InsertSession(Session{ProjectID: pID, Summary: "s3", Source: "wrapper", StartedAt: &now})
 
 	dates, err := d.GetDistinctSessionDates()
 	if err != nil {

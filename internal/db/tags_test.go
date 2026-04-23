@@ -41,7 +41,7 @@ func TestListSessionsByTag(t *testing.T) {
 	now := time.Now()
 	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 	s1, _ := d.InsertSession(Session{ProjectID: pID, Summary: "tagged", Source: "wrapper", StartedAt: &now})
-	d.InsertSession(Session{ProjectID: pID, Summary: "not tagged", Source: "wrapper", StartedAt: &now})
+	_, _ = d.InsertSession(Session{ProjectID: pID, Summary: "not tagged", Source: "wrapper", StartedAt: &now})
 
 	_ = d.AddSessionTag(s1, "special")
 

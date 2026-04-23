@@ -25,7 +25,7 @@ var reportCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		now := time.Now()
 		var since time.Time

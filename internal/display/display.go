@@ -119,8 +119,8 @@ func FormatProjectTable(w io.Writer, projects []db.Project) {
 		return
 	}
 
-	fmt.Fprintf(w, "\n%-16s %-12s %-8s %-6s %s\n", "PROJECT", "BRANCH", "STATUS", "DIRTY", "LAST COMMIT")
-	fmt.Fprintf(w, "%s\n", strings.Repeat("─", 70))
+	_, _ = fmt.Fprintf(w, "\n%-16s %-12s %-8s %-6s %s\n", "PROJECT", "BRANCH", "STATUS", "DIRTY", "LAST COMMIT")
+	_, _ = fmt.Fprintf(w, "%s\n", strings.Repeat("─", 70))
 
 	for _, p := range projects {
 		dirtyStr := ""
@@ -131,7 +131,7 @@ func FormatProjectTable(w io.Writer, projects []db.Project) {
 		if p.LastCommitAt.Valid {
 			commitTime = RelativeTime(p.LastCommitAt.Time)
 		}
-		fmt.Fprintf(w, "%-16s %-12s %-8s %-6s %s\n",
+		_, _ = fmt.Fprintf(w, "%-16s %-12s %-8s %-6s %s\n",
 			truncate(p.Name, 15), truncate(p.Branch, 11), p.Status, dirtyStr, commitTime)
 	}
 	_, _ = fmt.Fprintln(w)
@@ -558,29 +558,29 @@ func FormatDeps(w io.Writer, results []ProjectDeps, cleanCount int) {
 
 func FormatStale(w io.Writer, branches map[string][]StaleBranchInfo, dirtyDetails map[string][]string) {
 	if len(branches) == 0 && len(dirtyDetails) == 0 {
-		fmt.Fprintln(w, "Nothing stale or dirty.")
+		_, _ = fmt.Fprintln(w, "Nothing stale or dirty.")
 		return
 	}
 
 	if len(branches) > 0 {
-		fmt.Fprintf(w, "\nStale branches:\n\n")
+		_, _ = fmt.Fprintf(w, "\nStale branches:\n\n")
 		for project, brs := range branches {
-			fmt.Fprintf(w, "  %s\n", project)
+			_, _ = fmt.Fprintf(w, "  %s\n", project)
 			for _, b := range brs {
-				fmt.Fprintf(w, "    %s  (last commit: %s)\n", b.Name, b.Age)
+				_, _ = fmt.Fprintf(w, "    %s  (last commit: %s)\n", b.Name, b.Age)
 			}
-			fmt.Fprintln(w)
+			_, _ = fmt.Fprintln(w)
 		}
 	}
 
 	if len(dirtyDetails) > 0 {
-		fmt.Fprintf(w, "Dirty projects (uncommitted changes):\n\n")
+		_, _ = fmt.Fprintf(w, "Dirty projects (uncommitted changes):\n\n")
 		for project, files := range dirtyDetails {
-			fmt.Fprintf(w, "  %s\n", project)
+			_, _ = fmt.Fprintf(w, "  %s\n", project)
 			for _, f := range files {
-				fmt.Fprintf(w, "    %s\n", f)
+				_, _ = fmt.Fprintf(w, "    %s\n", f)
 			}
-			fmt.Fprintln(w)
+			_, _ = fmt.Fprintln(w)
 		}
 	}
 }

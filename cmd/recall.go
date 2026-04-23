@@ -25,7 +25,7 @@ var recallCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		client := embed.NewClient(cfg.OllamaURL, cfg.OllamaModel, &http.Client{Timeout: 5 * time.Second})
 

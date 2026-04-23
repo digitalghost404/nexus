@@ -21,7 +21,7 @@ var rememberCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		var projectID *int64
 		if project != "" {
