@@ -62,7 +62,7 @@ var searchCmd = &cobra.Command{
 			var filtered []db.Session
 			for _, s := range sessions {
 				var files []string
-				json.Unmarshal([]byte(s.FilesChanged), &files)
+				_ = json.Unmarshal([]byte(s.FilesChanged), &files)
 				for _, f := range files {
 					if matchFilePattern(f, searchFiles) {
 						filtered = append(filtered, s)

@@ -23,7 +23,7 @@ var diffCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		var project *db.Project
 		if len(args) > 0 {

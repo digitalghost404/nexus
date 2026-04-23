@@ -69,7 +69,7 @@ var whereCmd = &cobra.Command{
 				projectFiles[s.ProjectName] = map[string]*fileEntry{}
 			}
 			var files []string
-			json.Unmarshal([]byte(s.FilesChanged), &files)
+			_ = json.Unmarshal([]byte(s.FilesChanged), &files)
 			dateStr := ""
 			if s.StartedAt != nil {
 				dateStr = s.StartedAt.Format("Jan 02")

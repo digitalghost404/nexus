@@ -27,7 +27,7 @@ var initCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("init db: %w", err)
 		}
-		database.Close()
+		_ = database.Close()
 		fmt.Printf("Created database at %s\n", cfg.DBPath())
 
 		// Create default config if missing

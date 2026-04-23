@@ -122,7 +122,7 @@ var reportCmd = &cobra.Command{
 		var sf []sessionFiles
 		for _, s := range sessions {
 			var files []string
-			json.Unmarshal([]byte(s.FilesChanged), &files)
+			_ = json.Unmarshal([]byte(s.FilesChanged), &files)
 			sf = append(sf, sessionFiles{s.Summary, len(files)})
 		}
 		for i := 0; i < len(sf); i++ {

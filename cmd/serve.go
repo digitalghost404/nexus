@@ -116,7 +116,7 @@ var serveCmd = &cobra.Command{
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"note": noteJSON{
 					ID:        noteID,
 					Text:      body.Text,
@@ -151,7 +151,7 @@ var serveCmd = &cobra.Command{
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"project": result.ProjectName,
 				"summary": result.Summary,
 				"commits": result.Commits,
@@ -188,7 +188,7 @@ var serveCmd = &cobra.Command{
 				}
 
 				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(map[string]interface{}{"preferences": prefs})
+				_ = json.NewEncoder(w).Encode(map[string]interface{}{"preferences": prefs})
 				return
 			}
 
