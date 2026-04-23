@@ -25,7 +25,7 @@ var searchCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		query := strings.Join(args, " ")
 

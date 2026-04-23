@@ -162,10 +162,10 @@ func FormatSessionList(w io.Writer, sessions []db.Session) {
 }
 
 func FormatProjectDetail(w io.Writer, p *db.Project, sessions []db.Session, staleBranches []string, linkedProjects []db.Project) {
-	fmt.Fprintf(w, "\n┌ %s ─────────────────────────────────\n│\n", strings.ToUpper(p.Name))
+	_, _ = fmt.Fprintf(w, "\n┌ %s ─────────────────────────────────\n│\n", strings.ToUpper(p.Name))
 
-	fmt.Fprintf(w, "│  Path:      %s\n", p.Path)
-	fmt.Fprintf(w, "│  Branch:    %s\n", p.Branch)
+	_, _ = fmt.Fprintf(w, "│  Path:      %s\n", p.Path)
+	_, _ = fmt.Fprintf(w, "│  Branch:    %s\n", p.Branch)
 	fmt.Fprintf(w, "│  Status:    %s\n", p.Status)
 
 	if p.Dirty {

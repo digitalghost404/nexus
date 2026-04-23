@@ -29,7 +29,7 @@ var serveCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		// Start embed worker goroutine
 		ollamaClient := embed.NewClient(cfg.OllamaURL, cfg.OllamaModel, nil)

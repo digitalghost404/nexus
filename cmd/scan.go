@@ -35,7 +35,7 @@ func runScan(cfg config.Config, verbose bool) error {
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}
-	defer database.Close()
+	defer func() { _ = database.Close() }()
 
 	// Discover projects
 	paths, err := scanner.Discover(cfg.Roots, cfg.Exclude)

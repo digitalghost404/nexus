@@ -136,7 +136,7 @@ func getUnembeddedItems(database *db.DB, limit int) ([]unembeddedItem, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []unembeddedItem
 	for rows.Next() {
