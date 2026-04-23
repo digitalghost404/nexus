@@ -81,7 +81,7 @@ func FormatSmartSummary(w io.Writer, dirty []db.Project, sessions []db.Session, 
 
 	// Recent sessions
 	if len(sessions) > 0 {
-		fmt.Fprintf(w, "│  Recent Sessions\n")
+	_, _ = fmt.Fprintf(w, "│  Recent Sessions\n")
 		for _, s := range sessions {
 			timeStr := ""
 			if s.StartedAt != nil {
@@ -91,14 +91,14 @@ func FormatSmartSummary(w io.Writer, dirty []db.Project, sessions []db.Session, 
 			if len(summary) > 50 {
 				summary = summary[:47] + "..."
 			}
-		fmt.Fprintf(w, "│  %-14s %-12s \"%s\"\n", s.ProjectName, timeStr, summary)
+		_, _ = fmt.Fprintf(w, "│  %-14s %-12s \"%s\"\n", s.ProjectName, timeStr, summary)
 	}
 	_, _ = fmt.Fprintf(w, "│\n")
 	}
 
 	// Stale projects
 	if len(stale) > 0 {
-		fmt.Fprintf(w, "│  Stale (14+ days)\n│  ")
+		_, _ = fmt.Fprintf(w, "│  Stale (14+ days)\n│  ")
 		names := make([]string, len(stale))
 		for i, p := range stale {
 			names[i] = p.Name
@@ -210,7 +210,7 @@ func FormatProjectDetail(w io.Writer, p *db.Project, sessions []db.Session, stal
 
 func FormatSearchResults(w io.Writer, sessions []db.Session, notes []db.Note) {
 	if len(sessions) == 0 && len(notes) == 0 {
-		fmt.Fprintln(w, "No results found.")
+		_, _ = fmt.Fprintln(w, "No results found.")
 		return
 	}
 
@@ -413,10 +413,10 @@ func FormatStreak(w io.Writer, current, longest int, longestStart, longestEnd st
 
 func FormatWhere(w io.Writer, results []WhereResult) {
 	if len(results) == 0 {
-		fmt.Fprintln(w, "No results found.")
+		_, _ = fmt.Fprintln(w, "No results found.")
 		return
 	}
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w)
 	for _, r := range results {
 		fmt.Fprintln(w, r.ProjectName)
 		for _, f := range r.Files {

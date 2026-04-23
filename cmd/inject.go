@@ -24,7 +24,7 @@ var injectCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		p, err := database.GetProjectByName(projectName)
 		if err != nil {

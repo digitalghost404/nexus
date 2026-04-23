@@ -31,7 +31,7 @@ var linkCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		p1, err := lookupProject(database, args[0])
 		if err != nil {

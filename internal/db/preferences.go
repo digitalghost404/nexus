@@ -104,7 +104,7 @@ func (d *DB) ListPreferencesByProject(projectID *int64) ([]Preference, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list preferences by project: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	return scanPreferences(rows)
 }
 
@@ -116,7 +116,7 @@ func (d *DB) SearchPreferences(query string) ([]Preference, error) {
 	if err != nil {
 		return nil, fmt.Errorf("search preferences: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	return scanPreferences(rows)
 }
 
@@ -125,7 +125,7 @@ func (d *DB) DecayPreferences() error {
 	if err != nil {
 		return fmt.Errorf("query preferences for decay: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	now := time.Now()
 	for rows.Next() {

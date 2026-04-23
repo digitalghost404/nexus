@@ -157,8 +157,8 @@ func TestGetPreferenceNotFound(t *testing.T) {
 func TestDeleteLowConfidencePreferences(t *testing.T) {
 	d := testDB(t)
 
-	d.InsertPreference(Preference{Category: "pattern", Content: "Low confidence", Source: "inferred", Confidence: 0.1})
-	d.InsertPreference(Preference{Category: "workflow", Content: "High confidence", Source: "stated", Confidence: 1.0})
+	_, _ = d.InsertPreference(Preference{Category: "pattern", Content: "Low confidence", Source: "inferred", Confidence: 0.1})
+	_, _ = d.InsertPreference(Preference{Category: "workflow", Content: "High confidence", Source: "stated", Confidence: 1.0})
 
 	deleted, err := d.DeleteLowConfidencePreferences(0.15)
 	if err != nil {
@@ -219,7 +219,7 @@ func TestBumpPreferenceAccess(t *testing.T) {
 func TestDeleteContradictingInferredPreferences(t *testing.T) {
 	d := testDB(t)
 
-	d.InsertPreference(Preference{Category: "workflow", Content: "Use tabs", Source: "inferred", Confidence: 0.4})
+	_, _ = d.InsertPreference(Preference{Category: "workflow", Content: "Use tabs", Source: "inferred", Confidence: 0.4})
 	d.InsertPreference(Preference{Category: "workflow", Content: "Use spaces", Source: "stated", Confidence: 1.0})
 
 	deleted, err := d.DeleteContradictingInferredPreferences()

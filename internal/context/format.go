@@ -96,7 +96,7 @@ func formatProjectHeader(project *db.Project) string {
 		b.WriteString(" | **Last commit**: none\n")
 	} else {
 		daysSince := int(time.Since(project.LastCommitAt.Time).Hours() / 24)
-		b.WriteString(fmt.Sprintf(" | **Last commit**: %s (%d days ago)\n", project.LastCommitMsg, daysSince))
+		fmt.Fprintf(&b, " | **Last commit**: %s (%d days ago)\n", project.LastCommitMsg, daysSince)
 	}
 
 	return b.String()

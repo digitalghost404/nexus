@@ -29,7 +29,7 @@ func CreateTestRepo(t *testing.T, dir string) string {
 	}
 
 	run("init", "-b", "main")
-	os.WriteFile(filepath.Join(dir, "README.md"), []byte("# test"), 0644)
+	_ = os.WriteFile(filepath.Join(dir, "README.md"), []byte("# test"), 0644)
 	run("add", ".")
 	run("commit", "-m", "initial commit")
 

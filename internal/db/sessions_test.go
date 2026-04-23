@@ -112,8 +112,8 @@ func TestGetLatestSession(t *testing.T) {
 	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 
 	earlier := now.Add(-2 * time.Hour)
-	d.InsertSession(Session{ProjectID: pID, Summary: "first", Source: "wrapper", StartedAt: &earlier})
-	d.InsertSession(Session{ProjectID: pID, Summary: "latest", Source: "wrapper", StartedAt: &now})
+	_, _ = d.InsertSession(Session{ProjectID: pID, Summary: "first", Source: "wrapper", StartedAt: &earlier})
+	_, _ = d.InsertSession(Session{ProjectID: pID, Summary: "latest", Source: "wrapper", StartedAt: &now})
 
 	s, err := d.GetLatestSession(pID)
 	if err != nil {
@@ -145,7 +145,7 @@ func TestGetSessionsInRange(t *testing.T) {
 
 	old := now.Add(-10 * 24 * time.Hour)
 	recent := now.Add(-1 * time.Hour)
-	d.InsertSession(Session{ProjectID: pID, Summary: "old", Source: "wrapper", StartedAt: &old})
+	_, _ = d.InsertSession(Session{ProjectID: pID, Summary: "old", Source: "wrapper", StartedAt: &old})
 	d.InsertSession(Session{ProjectID: pID, Summary: "recent", Source: "wrapper", StartedAt: &recent})
 
 	since := now.Add(-7 * 24 * time.Hour)

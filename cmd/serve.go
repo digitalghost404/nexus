@@ -233,7 +233,7 @@ var serveCmd = &cobra.Command{
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusCreated)
-				json.NewEncoder(w).Encode(map[string]interface{}{"id": id, "content": body.Content})
+				_ = json.NewEncoder(w).Encode(map[string]interface{}{"id": id, "content": body.Content})
 				return
 			}
 
@@ -300,7 +300,7 @@ var serveCmd = &cobra.Command{
 				}
 
 				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(map[string]interface{}{"id": id, "updated": true})
+				_ = json.NewEncoder(w).Encode(map[string]interface{}{"id": id, "updated": true})
 				return
 			}
 
@@ -311,7 +311,7 @@ var serveCmd = &cobra.Command{
 				}
 
 				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(map[string]interface{}{"id": id, "deleted": true})
+				_ = json.NewEncoder(w).Encode(map[string]interface{}{"id": id, "deleted": true})
 				return
 			}
 

@@ -16,7 +16,7 @@ var maintainCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		if err := database.DecayPreferences(); err != nil {
 			return fmt.Errorf("decay preferences: %w", err)
