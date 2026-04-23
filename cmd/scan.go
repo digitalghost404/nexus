@@ -21,11 +21,12 @@ var scanCmd = &cobra.Command{
 	Use:   "scan",
 	Short: "Scan roots for projects and update health data",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := config.Load(cfg.ConfigPath())
+		loadedCfg, err := config.Load(cfg.ConfigPath())
 		if err != nil {
 			return err
 		}
-		return runScan(cfg, scanVerbose)
+		loadedCfg.Agent = agent
+		return runScan(loadedCfg, scanVerbose)
 	},
 }
 
