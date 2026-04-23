@@ -531,19 +531,7 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 
 	var queueDepth int
 	_ = h.db.Conn().QueryRow(`
-		SELECT COUNT(*) FROM (
-			SELECT s.id FROM sessions s
-			LEFT JOIN embedding_meta em ON em.source_type = 'session' AND em.source_id = s.id
-			WHERE em.id IS NULL AND s.summary IS NOT NULL AND s.summary != ''
-			UNION ALL
-			SELECT n.id FROM notes n
-			LEFT JOIN embedding_meta em ON em.source_type = 'note' AND em.source_id = n.id
-			WHERE em.id IS NULL AND n.content IS NOT NULL AND n.content != ''
-			UNION ALL
-			SELECT p.id FROM preferences p
-			LEFT JOIN embedding_meta em ON em.source_type = 'preference' AND em.source_id = p.id
-			WHERE em.id IS NULL AND p.content IS NOT NULL AND p.content != '' AND p.superseded_by IS NULL
-		)
+		SELECT COUNT(*) FROM embedding_meta WHERE status = 'pending'
 	`).Scan(&queueDepth)
 
 	ollamaClient := embed.NewClient(h.ollamaURL, h.ollamaModel, &http.Client{Timeout: 2 * time.Second})
