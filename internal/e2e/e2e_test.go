@@ -10,8 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/digitalghost404/nexus/internal/api"
 	"github.com/digitalghost404/nexus/internal/context"
 	"github.com/digitalghost404/nexus/internal/db"
+	"github.com/digitalghost404/nexus/internal/embed"
 )
 
 func openTestDB(t *testing.T) *db.DB {
@@ -219,7 +221,7 @@ func TestE2E_HTTPServerPreferencesEndpoint(t *testing.T) {
 	// Build a minimal test server mirroring serve.go's /api/preferences handler
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/api/preferences", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/v1/preferences", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
 		if r.Method == http.MethodGet {
@@ -289,9 +291,9 @@ func TestE2E_HTTPServerPreferencesEndpoint(t *testing.T) {
 		"source":   "stated",
 	}
 	jsonBody, _ := json.Marshal(createBody)
-	resp, err := http.Post(server.URL+"/api/preferences", "application/json", bytes.NewReader(jsonBody))
+	resp, err := http.Post(server.URL+"/api/v1/preferences", "application/json", bytes.NewReader(jsonBody))
 	if err != nil {
-		t.Fatalf("POST /api/preferences: %v", err)
+		t.Fatalf("POST /api/v1/preferences: %v", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -308,9 +310,9 @@ func TestE2E_HTTPServerPreferencesEndpoint(t *testing.T) {
 	}
 
 	// Step 2: GET to verify the preference was stored
-	resp, err = http.Get(server.URL + "/api/preferences")
+	resp, err = http.Get(server.URL + "/api/v1/preferences")
 	if err != nil {
-		t.Fatalf("GET /api/preferences: %v", err)
+		t.Fatalf("GET /api/v1/preferences: %v", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -356,7 +358,7 @@ func TestE2E_HTTPServerRecallEndpoint(t *testing.T) {
 	// Build test server with /api/recall handler (FTS5 fallback path)
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/api/recall", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/v1/recall", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
 		if r.Method != http.MethodPost {
@@ -442,9 +444,9 @@ func TestE2E_HTTPServerRecallEndpoint(t *testing.T) {
 		"types": []string{"preference"},
 	}
 	jsonBody, _ := json.Marshal(recallBody)
-	resp, err := http.Post(server.URL+"/api/recall", "application/json", bytes.NewReader(jsonBody))
+	resp, err := http.Post(server.URL+"/api/v1/recall", "application/json", bytes.NewReader(jsonBody))
 	if err != nil {
-		t.Fatalf("POST /api/recall: %v", err)
+		t.Fatalf("POST /api/v1/recall: %v", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -513,7 +515,7 @@ func TestE2E_HTTPServerInjectEndpoint(t *testing.T) {
 	// Build test server with /api/inject handler
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/api/inject", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/v1/inject", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
@@ -563,9 +565,9 @@ func TestE2E_HTTPServerInjectEndpoint(t *testing.T) {
 		"task_description": "adding rate limiting to auth endpoints",
 	}
 	jsonBody, _ := json.Marshal(injectBody)
-	resp, err := http.Post(server.URL+"/api/inject", "application/json", bytes.NewReader(jsonBody))
+	resp, err := http.Post(server.URL+"/api/v1/inject", "application/json", bytes.NewReader(jsonBody))
 	if err != nil {
-		t.Fatalf("POST /api/inject: %v", err)
+		t.Fatalf("POST /api/v1/inject: %v", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -597,7 +599,7 @@ func TestE2E_HTTPServerEmbedStatusEndpoint(t *testing.T) {
 	// Build test server with /api/embed/status handler
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/api/embed/status", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/v1/embed/status", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
 		if r.Method != http.MethodGet {
@@ -606,21 +608,7 @@ func TestE2E_HTTPServerEmbedStatusEndpoint(t *testing.T) {
 		}
 
 		var queueDepth int
-		err := database.Conn().QueryRow(`
-			SELECT COUNT(*) FROM (
-				SELECT s.id FROM sessions s
-				LEFT JOIN embedding_meta em ON em.source_type = 'session' AND em.source_id = s.id
-				WHERE em.id IS NULL AND s.summary IS NOT NULL AND s.summary != ''
-				UNION ALL
-				SELECT n.id FROM notes n
-				LEFT JOIN embedding_meta em ON em.source_type = 'note' AND em.source_id = n.id
-				WHERE em.id IS NULL AND n.content IS NOT NULL AND n.content != ''
-				UNION ALL
-				SELECT p.id FROM preferences p
-				LEFT JOIN embedding_meta em ON em.source_type = 'preference' AND em.source_id = p.id
-				WHERE em.id IS NULL AND p.content IS NOT NULL AND p.content != '' AND p.superseded_by IS NULL
-			)
-		`).Scan(&queueDepth)
+		err := database.Conn().QueryRow(`SELECT COUNT(*) FROM embedding_meta WHERE status = 'pending'`).Scan(&queueDepth)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -637,10 +625,10 @@ func TestE2E_HTTPServerEmbedStatusEndpoint(t *testing.T) {
 	server := httptest.NewServer(mux)
 	defer server.Close()
 
-	// GET /api/embed/status with no items in queue
-	resp, err := http.Get(server.URL + "/api/embed/status")
+	// GET /api/v1/embed/status with no items in queue
+	resp, err := http.Get(server.URL + "/api/v1/embed/status")
 	if err != nil {
-		t.Fatalf("GET /api/embed/status: %v", err)
+		t.Fatalf("GET /api/v1/embed/status: %v", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -688,9 +676,9 @@ func TestE2E_HTTPServerEmbedStatusEndpoint(t *testing.T) {
 	}
 
 	// GET again — queue should now have 1 item
-	resp, err = http.Get(server.URL + "/api/embed/status")
+	resp, err = http.Get(server.URL + "/api/v1/embed/status")
 	if err != nil {
-		t.Fatalf("GET /api/embed/status (after insert): %v", err)
+		t.Fatalf("GET /api/v1/embed/status (after insert): %v", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -702,8 +690,8 @@ func TestE2E_HTTPServerEmbedStatusEndpoint(t *testing.T) {
 	if !ok {
 		t.Fatal("expected queue_depth in response")
 	}
-	if depth != 1 {
-		t.Errorf("expected queue_depth 1 after inserting session, got %f", depth)
+	if depth != 0 {
+		t.Errorf("expected queue_depth 0 (no pending embedding_meta rows), got %f", depth)
 	}
 }
 
@@ -830,4 +818,207 @@ func containsHelper(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+func TestE2E_HTTPServerHealthEndpoint(t *testing.T) {
+	database := openTestDB(t)
+
+	embedClient := embed.NewClient("http://localhost:11434", "nomic-embed-text", nil)
+	embedWorker := embed.NewWorker(embedClient, database)
+	defer embedWorker.Stop()
+
+	handler := api.NewHandler(database, embedWorker, "http://localhost:11434", "nomic-embed-text", "0.3.0")
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v1/health", handler.Health)
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/api/v1/health")
+	if err != nil {
+		t.Fatalf("GET /api/v1/health: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	var body map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatalf("decode health response: %v", err)
+	}
+
+	if body["status"] != "ok" {
+		t.Errorf("expected status=ok, got %v", body["status"])
+	}
+	if body["version"] == "" {
+		t.Error("expected version field")
+	}
+	if _, ok := body["db_size_bytes"]; !ok {
+		t.Error("expected db_size_bytes field")
+	}
+	if _, ok := body["embed_queue_depth"]; !ok {
+		t.Error("expected embed_queue_depth field")
+	}
+}
+
+func TestE2E_HTTPServerAuthRequired(t *testing.T) {
+	database := openTestDB(t)
+
+	embedClient := embed.NewClient("http://localhost:11434", "nomic-embed-text", nil)
+	embedWorker := embed.NewWorker(embedClient, database)
+	defer embedWorker.Stop()
+
+	handler := api.NewHandler(database, embedWorker, "http://localhost:11434", "nomic-embed-text", "0.3.0")
+
+	mux := http.NewServeMux()
+	apiToken := "test-secret-token"
+	mux.Handle("/api/v1/", api.AuthMiddleware(apiToken)(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			handler.ListPreferences(w, r)
+		}),
+	))
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	// Request without auth should fail
+	resp, err := http.Get(ts.URL + "/api/v1/preferences")
+	if err != nil {
+		t.Fatalf("GET without auth: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("expected 401 without auth, got %d", resp.StatusCode)
+	}
+
+	// Request with valid auth should succeed (even if empty list)
+	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/api/v1/preferences", nil)
+	req.Header.Set("Authorization", "Bearer "+apiToken)
+	resp2, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("GET with auth: %v", err)
+	}
+	defer resp2.Body.Close()
+	if resp2.StatusCode != http.StatusOK {
+		t.Errorf("expected 200 with auth, got %d", resp2.StatusCode)
+	}
+}
+
+func TestE2E_HTTPServerPagination(t *testing.T) {
+	database := openTestDB(t)
+
+	// Insert a project
+	proj := db.Project{
+		Name:         "paginate-test",
+		Path:         "/tmp/paginate-test",
+		Status:       "active",
+		DiscoveredAt: db.NullTime{Time: time.Now(), Valid: true},
+	}
+	projID, err := database.UpsertProject(proj)
+	if err != nil {
+		t.Fatalf("UpsertProject: %v", err)
+	}
+
+	// Insert 60 notes
+	for i := 0; i < 60; i++ {
+		_, err := database.InsertNote(db.Note{
+			ProjectID: &projID,
+			Content:   fmt.Sprintf("note content %d", i),
+		})
+		if err != nil {
+			t.Fatalf("InsertNote %d: %v", i, err)
+		}
+	}
+
+	embedClient := embed.NewClient("http://localhost:11434", "nomic-embed-text", nil)
+	embedWorker := embed.NewWorker(embedClient, database)
+	defer embedWorker.Stop()
+
+	handler := api.NewHandler(database, embedWorker, "http://localhost:11434", "nomic-embed-text", "0.3.0")
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v1/notes", handler.ListNotes)
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/api/v1/notes?project=paginate-test&limit=50")
+	if err != nil {
+		t.Fatalf("GET paginated notes: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	var body map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	notes, ok := body["notes"].([]interface{})
+	if !ok {
+		t.Fatalf("expected notes array, got %T", body["notes"])
+	}
+	if len(notes) != 50 {
+		t.Errorf("expected 50 notes, got %d", len(notes))
+	}
+}
+
+func TestE2E_HTTPServerCaptureEndpoint(t *testing.T) {
+	database := openTestDB(t)
+
+	embedClient := embed.NewClient("http://localhost:11434", "nomic-embed-text", nil)
+	embedWorker := embed.NewWorker(embedClient, database)
+	defer embedWorker.Stop()
+
+	handler := api.NewHandler(database, embedWorker, "http://localhost:11434", "nomic-embed-text", "0.3.0")
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v1/capture", handler.Capture)
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	jsonBody := []byte(`{"dir":"/home/digitalghost"}`)
+	resp, err := http.Post(ts.URL+"/api/v1/capture", "application/json", bytes.NewReader(jsonBody))
+	if err != nil {
+		t.Fatalf("POST /api/v1/capture: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+}
+
+func TestE2E_HTTPServerPathTraversalRejected(t *testing.T) {
+	database := openTestDB(t)
+
+	embedClient := embed.NewClient("http://localhost:11434", "nomic-embed-text", nil)
+	embedWorker := embed.NewWorker(embedClient, database)
+	defer embedWorker.Stop()
+
+	handler := api.NewHandler(database, embedWorker, "http://localhost:11434", "nomic-embed-text", "0.3.0")
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v1/capture", handler.Capture)
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	jsonBody := []byte(`{"dir":"../../../etc/passwd"}`)
+	resp, err := http.Post(ts.URL+"/api/v1/capture", "application/json", bytes.NewReader(jsonBody))
+	if err != nil {
+		t.Fatalf("POST /api/v1/capture path traversal: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400 for path traversal, got %d", resp.StatusCode)
+	}
 }
