@@ -1,8 +1,6 @@
 -- v4: Change DATETIME columns to TEXT to fix modernc.org/sqlite driver issues
 -- The driver tries to auto-convert DATETIME columns, bypassing custom Scanners
 
-BEGIN TRANSACTION;
-
 CREATE TABLE IF NOT EXISTS projects_new (
     id              INTEGER PRIMARY KEY,
     name            TEXT NOT NULL,
@@ -24,5 +22,3 @@ INSERT INTO projects_new SELECT * FROM projects;
 DROP TABLE projects;
 ALTER TABLE projects_new RENAME TO projects;
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
-
-COMMIT;

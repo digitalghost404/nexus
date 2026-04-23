@@ -56,6 +56,44 @@ func Open(path string) (*DB, error) {
 	return d, nil
 }
 
+type migration struct {
+	version int
+	fn      func(*sql.Tx) error
+}
+
+var migrations = []migration{
+	{1, migrateV1},
+	{2, migrateV2},
+	{3, migrateV3},
+	{4, migrateV4},
+	{5, migrateV5},
+}
+
+func migrateV1(tx *sql.Tx) error {
+	_, err := tx.Exec(schemaSQL)
+	return err
+}
+
+func migrateV2(tx *sql.Tx) error {
+	_, err := tx.Exec(migrationV2SQL)
+	return err
+}
+
+func migrateV3(tx *sql.Tx) error {
+	_, err := tx.Exec(migrationV3SQL)
+	return err
+}
+
+func migrateV4(tx *sql.Tx) error {
+	_, err := tx.Exec(migrationV4SQL)
+	return err
+}
+
+func migrateV5(tx *sql.Tx) error {
+	_, err := tx.Exec(migrationV5SQL)
+	return err
+}
+
 func (d *DB) migrate() error {
 	var version int
 	if err := d.db.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
@@ -67,54 +105,26 @@ func (d *DB) migrate() error {
 		return fmt.Errorf("database schema version %d is newer than supported version %d — upgrade nexus", version, currentVersion)
 	}
 
-	if version == 0 {
-		if _, err := d.db.Exec(schemaSQL); err != nil {
-			return fmt.Errorf("apply schema: %w", err)
+	for _, m := range migrations {
+		if m.version <= version {
+			continue
 		}
-		if _, err := d.db.Exec("PRAGMA user_version = 3"); err != nil {
-			return fmt.Errorf("set version: %w", err)
+		tx, err := d.db.Begin()
+		if err != nil {
+			return fmt.Errorf("begin migration %d: %w", m.version, err)
 		}
-		version = 3
-	}
-
-	if version == 1 {
-		if _, err := d.db.Exec(migrationV2SQL); err != nil {
-			return fmt.Errorf("apply v2 migration: %w", err)
+		if err := m.fn(tx); err != nil {
+			_ = tx.Rollback()
+			return fmt.Errorf("migration %d: %w", m.version, err)
 		}
-		if _, err := d.db.Exec("PRAGMA user_version = 2"); err != nil {
-			return fmt.Errorf("set version: %w", err)
+		if _, err := tx.Exec(fmt.Sprintf("PRAGMA user_version = %d", m.version)); err != nil {
+			_ = tx.Rollback()
+			return fmt.Errorf("set version after migration %d: %w", m.version, err)
 		}
-		version = 2
-	}
-
-	if version == 2 {
-		if _, err := d.db.Exec(migrationV3SQL); err != nil {
-			return fmt.Errorf("apply v3 migration: %w", err)
+		if err := tx.Commit(); err != nil {
+			return fmt.Errorf("commit migration %d: %w", m.version, err)
 		}
-		if _, err := d.db.Exec("PRAGMA user_version = 3"); err != nil {
-			return fmt.Errorf("set version: %w", err)
-		}
-		version = 3
-	}
-
-	if version == 3 {
-		if _, err := d.db.Exec(migrationV4SQL); err != nil {
-			return fmt.Errorf("apply v4 migration: %w", err)
-		}
-		if _, err := d.db.Exec("PRAGMA user_version = 4"); err != nil {
-			return fmt.Errorf("set version: %w", err)
-		}
-		version = 4
-	}
-
-	if version == 4 {
-		if _, err := d.db.Exec(migrationV5SQL); err != nil {
-			return fmt.Errorf("apply v5 migration: %w", err)
-		}
-		if _, err := d.db.Exec("PRAGMA user_version = 5"); err != nil {
-			return fmt.Errorf("set version: %w", err)
-		}
-		version = 5
+		version = m.version
 	}
 
 	return nil
