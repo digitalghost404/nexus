@@ -301,8 +301,8 @@ func TestCORSMiddleware_NoOrigins(t *testing.T) {
 
 	wrapped.ServeHTTP(w, req)
 
-	if w.Header().Get("Access-Control-Allow-Origin") != "*" {
-		t.Errorf("expected '*' origin, got %q", w.Header().Get("Access-Control-Allow-Origin"))
+	if w.Header().Get("Access-Control-Allow-Origin") != "" {
+		t.Errorf("expected no CORS headers when origins is empty, got %q", w.Header().Get("Access-Control-Allow-Origin"))
 	}
 }
 

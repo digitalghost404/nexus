@@ -88,7 +88,11 @@ func (h *Handler) ListNotes(w http.ResponseWriter, r *http.Request) {
 
 	var projectID int64
 	if projectName != "" {
-		p, _ := h.db.GetProjectByName(projectName)
+		p, err := h.db.GetProjectByName(projectName)
+		if err != nil {
+			jsonError(w, "failed to lookup project", http.StatusInternalServerError)
+			return
+		}
 		if p != nil {
 			projectID = p.ID
 		}
@@ -135,7 +139,11 @@ func (h *Handler) CreateNote(w http.ResponseWriter, r *http.Request) {
 
 	var projectID *int64
 	if body.Project != "" {
-		p, _ := h.db.GetProjectByName(body.Project)
+		p, err := h.db.GetProjectByName(body.Project)
+		if err != nil {
+			jsonError(w, "failed to lookup project", http.StatusInternalServerError)
+			return
+		}
 		if p != nil {
 			id := p.ID
 			projectID = &id
@@ -539,19 +547,19 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	`).Scan(&queueDepth)
 
 	ollamaClient := embed.NewClient(h.ollamaURL, h.ollamaModel, &http.Client{Timeout: 2 * time.Second})
-	ollamaStatus := "disconnected"
+	ollamaOK := false
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 	_, err := ollamaClient.Embed(ctx, "test")
 	if err == nil {
-		ollamaStatus = "connected"
+		ollamaOK = true
 	}
 
 	h.writeJSON(w, HealthResponse{
-		Status:        "ok",
-		Version:       h.version,
-		Ollama:        ollamaStatus,
-		DBSizeBytes:   dbSizeBytes,
+		Status:          "ok",
+		Version:         h.version,
+		Ollama:          ollamaOK,
+		DBSizeBytes:     dbSizeBytes,
 		EmbedQueueDepth: queueDepth,
 	}, http.StatusOK)
 }

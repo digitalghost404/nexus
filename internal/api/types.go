@@ -42,11 +42,11 @@ func (r *InjectRequest) Validate() error {
 }
 
 type HealthResponse struct {
-	Status        string `json:"status"`
-	Version       string `json:"version"`
-	Ollama        string `json:"ollama"`
-	DBSizeBytes   int64  `json:"db_size_bytes"`
-	EmbedQueueDepth int  `json:"embed_queue_depth"`
+	Status          string `json:"status"`
+	Version         string `json:"version"`
+	Ollama          bool   `json:"ollama"`
+	DBSizeBytes     int64  `json:"db_size_bytes"`
+	EmbedQueueDepth int    `json:"embed_queue_depth"`
 }
 
 func ValidatePath(dir string) error {

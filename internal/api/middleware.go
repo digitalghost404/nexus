@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"strings"
@@ -25,7 +26,8 @@ func (rw *responseWriter) WriteHeader(code int) {
 func jsonError(w http.ResponseWriter, msg string, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_, _ = w.Write([]byte(`{"error":"` + msg + `"}` + "\n"))
+	b, _ := json.Marshal(ErrorResponse{Error: msg})
+	_, _ = w.Write(append(b, '\n'))
 }
 
 func AuthMiddleware(token string) func(http.Handler) http.Handler {
@@ -66,19 +68,13 @@ func CORSMiddleware(origins []string) func(http.Handler) http.Handler {
 						break
 					}
 				}
-				if !matched && origin != "" {
-					next.ServeHTTP(w, r)
-					return
-				}
 				if matched {
 					w.Header().Set("Access-Control-Allow-Origin", origin)
+					w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+					w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 				}
-			} else {
-				w.Header().Set("Access-Control-Allow-Origin", "*")
 			}
-
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			// If origins is empty, no CORS headers are set (deny all cross-origin)
 
 			if r.Method == http.MethodOptions {
 				w.WriteHeader(http.StatusNoContent)
