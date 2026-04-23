@@ -31,7 +31,7 @@ var whereCmd = &cobra.Command{
 			return err
 		}
 
-		allSessions, err := database.ListSessions(db.SessionFilter{Limit: 1000})
+		allSessions, _, err := database.ListSessions(db.SessionFilter{Limit: 1000})
 		if err != nil {
 			return err
 		}

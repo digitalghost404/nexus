@@ -65,7 +65,7 @@ func smartSummary() error {
 	defer func() { _ = database.Close() }()
 
 	dirty, _ := database.ListDirtyProjects()
-	sessions, _ := database.ListSessions(db.SessionFilter{Limit: 5})
+	sessions, _, _ := database.ListSessions(db.SessionFilter{Limit: 5})
 	stale, _ := database.ListProjects("stale")
 
 	// Detect current project for context

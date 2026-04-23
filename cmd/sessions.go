@@ -16,6 +16,9 @@ var (
 	sessionsSince   string
 	sessionsToday   bool
 	sessionsTag     string
+	sessionsLimit   int
+	sessionsOffset  int
+	sessionsAll     bool
 )
 
 var sessionsCmd = &cobra.Command{
@@ -37,7 +40,12 @@ var sessionsCmd = &cobra.Command{
 			return nil
 		}
 
-		filter := db.SessionFilter{Limit: 10}
+		limit := sessionsLimit
+		if sessionsAll {
+			limit = 0
+		}
+
+		filter := db.SessionFilter{Limit: limit, Offset: sessionsOffset}
 
 		// Handle positional project arg
 		project := sessionsProject
@@ -68,7 +76,7 @@ var sessionsCmd = &cobra.Command{
 			filter.Since = since
 		}
 
-		sessions, err := database.ListSessions(filter)
+		sessions, _, err := database.ListSessions(filter)
 		if err != nil {
 			return err
 		}
@@ -114,5 +122,8 @@ func init() {
 	sessionsCmd.Flags().StringVar(&sessionsSince, "since", "", "Show sessions since duration (e.g. 7d)")
 	sessionsCmd.Flags().BoolVar(&sessionsToday, "today", false, "Show today's sessions only")
 	sessionsCmd.Flags().StringVar(&sessionsTag, "tag", "", "Filter by user tag")
+	sessionsCmd.Flags().IntVar(&sessionsLimit, "limit", 50, "max results (default 50)")
+	sessionsCmd.Flags().IntVar(&sessionsOffset, "offset", 0, "skip N results")
+	sessionsCmd.Flags().BoolVar(&sessionsAll, "all", false, "show all results (ignores --limit)")
 	rootCmd.AddCommand(sessionsCmd)
 }

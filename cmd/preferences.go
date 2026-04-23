@@ -7,6 +7,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	prefsLimit  int
+	prefsOffset int
+	prefsAll    bool
+)
+
 var preferencesCmd = &cobra.Command{
 	Use:   "preferences",
 	Short: "List preferences and patterns",
@@ -31,7 +37,12 @@ var preferencesCmd = &cobra.Command{
 			}
 		}
 
-		prefs, err := database.ListPreferencesByProject(projectID)
+		limit := prefsLimit
+		if prefsAll {
+			limit = 0
+		}
+
+		prefs, _, err := database.ListPreferencesByProject(projectID, limit, prefsOffset)
 		if err != nil {
 			return fmt.Errorf("list preferences: %w", err)
 		}
@@ -61,5 +72,8 @@ func init() {
 	preferencesCmd.GroupID = "query"
 	preferencesCmd.Flags().StringP("project", "p", "", "Project scope")
 	preferencesCmd.Flags().String("category", "", "Filter by category")
+	preferencesCmd.Flags().IntVar(&prefsLimit, "limit", 50, "max results (default 50)")
+	preferencesCmd.Flags().IntVar(&prefsOffset, "offset", 0, "skip N results")
+	preferencesCmd.Flags().BoolVar(&prefsAll, "all", false, "show all results (ignores --limit)")
 	rootCmd.AddCommand(preferencesCmd)
 }

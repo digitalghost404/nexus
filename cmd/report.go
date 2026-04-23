@@ -35,7 +35,7 @@ var reportCmd = &cobra.Command{
 			since = now.AddDate(0, 0, -7) // default: week
 		}
 
-		sessions, _ := database.ListSessions(db.SessionFilter{Since: &since, Limit: 1000})
+		sessions, _, _ := database.ListSessions(db.SessionFilter{Since: &since, Limit: 1000})
 
 		// Aggregate
 		projectMap := map[string]*display.ProjectActivity{}

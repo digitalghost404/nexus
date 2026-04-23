@@ -98,7 +98,7 @@ func (h *Handler) ListNotes(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	notes, err := h.db.ListNotes(projectID, limit)
+	notes, _, err := h.db.ListNotes(projectID, limit, 0)
 	if err != nil {
 		jsonError(w, "failed to list notes", http.StatusInternalServerError)
 		return
@@ -189,7 +189,7 @@ func (h *Handler) ListPreferences(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	prefs, err := h.db.ListPreferencesByProject(projectID)
+	prefs, _, err := h.db.ListPreferencesByProject(projectID, 0, 0)
 	if err != nil {
 		jsonError(w, "failed to list preferences", http.StatusInternalServerError)
 		return
@@ -441,7 +441,7 @@ func (h *Handler) Inject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessions, _ := h.db.ListSessions(db.SessionFilter{ProjectID: project.ID, Limit: 5})
+	sessions, _, _ := h.db.ListSessions(db.SessionFilter{ProjectID: project.ID, Limit: 5})
 
 	ollamaClient := embed.NewClient(h.ollamaURL, h.ollamaModel, nil)
 
@@ -466,7 +466,7 @@ func (h *Handler) Inject(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	prefs, _ := h.db.ListPreferencesByProject(&project.ID)
+	prefs, _, _ := h.db.ListPreferencesByProject(&project.ID, 0, 0)
 
 	ctxOutput := nctx.BuildContext(nctx.ContextOptions{
 		Project:         project,

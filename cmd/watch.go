@@ -34,7 +34,7 @@ var watchCmd = &cobra.Command{
 			clearScreen()
 
 			dirty, _ := database.ListDirtyProjects()
-			sessions, _ := database.ListSessions(db.SessionFilter{Limit: 5})
+			sessions, _, _ := database.ListSessions(db.SessionFilter{Limit: 5})
 			stale, _ := database.ListProjects("stale")
 
 			cwd, _ := os.Getwd()

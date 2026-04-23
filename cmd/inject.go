@@ -87,7 +87,7 @@ var injectCmd = &cobra.Command{
 		var projectID *int64
 		pid := p.ID
 		projectID = &pid
-		prefs, err := database.ListPreferencesByProject(projectID)
+		prefs, _, err := database.ListPreferencesByProject(projectID, 0, 0)
 		if err != nil {
 			return fmt.Errorf("list preferences: %w", err)
 		}

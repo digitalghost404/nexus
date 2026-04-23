@@ -34,7 +34,7 @@ func TestCaptureSession(t *testing.T) {
 	}
 
 	// Verify session was stored
-	sessions, err := d.ListSessions(db.SessionFilter{Limit: 10})
+	sessions, _, err := d.ListSessions(db.SessionFilter{Limit: 10})
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}

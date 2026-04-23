@@ -44,7 +44,7 @@ var contextCmd = &cobra.Command{
 
 		since := time.Now().AddDate(0, 0, -7)
 		sessions, _ := database.GetSessionsInRange(p.ID, since, time.Now())
-		notes, _ := database.ListNotes(p.ID, 10)
+		notes, _, _ := database.ListNotes(p.ID, 10, 0)
 
 		var linkedProjects []db.Project
 		linkedProjects, _ = database.GetLinkedProjects(p.ID)
@@ -124,7 +124,7 @@ func runInjectContext(database *db.DB, p *db.Project, cmd *cobra.Command) error 
 	var projectID *int64
 	pid := p.ID
 	projectID = &pid
-	prefs, err := database.ListPreferencesByProject(projectID)
+	prefs, _, err := database.ListPreferencesByProject(projectID, 0, 0)
 	if err != nil {
 		return fmt.Errorf("list preferences: %w", err)
 	}

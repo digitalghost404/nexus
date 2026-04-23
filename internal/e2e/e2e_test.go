@@ -132,12 +132,12 @@ func TestE2E_ContextBuilderIncludesPreferences(t *testing.T) {
 		t.Fatalf("GetProjectByName: %v", err)
 	}
 
-	sessions, err := database.ListSessions(db.SessionFilter{ProjectID: project.ID, Limit: 5})
+	sessions, _, err := database.ListSessions(db.SessionFilter{ProjectID: project.ID, Limit: 5})
 	if err != nil {
 		t.Fatalf("ListSessions: %v", err)
 	}
 
-	fetchedPrefs, err := database.ListPreferencesByProject(&project.ID)
+	fetchedPrefs, _, err := database.ListPreferencesByProject(&project.ID, 0, 0)
 	if err != nil {
 		t.Fatalf("ListPreferencesByProject: %v", err)
 	}
@@ -197,8 +197,8 @@ func TestE2E_ColdStartContext(t *testing.T) {
 		t.Fatalf("GetProjectByName: %v", err)
 	}
 
-	sessions, _ := database.ListSessions(db.SessionFilter{ProjectID: project.ID, Limit: 5})
-	prefs, _ := database.ListPreferencesByProject(&project.ID)
+	sessions, _, _ := database.ListSessions(db.SessionFilter{ProjectID: project.ID, Limit: 5})
+	prefs, _, _ := database.ListPreferencesByProject(&project.ID, 0, 0)
 
 	output := context.BuildContext(context.ContextOptions{
 		Project:         project,
@@ -223,7 +223,7 @@ func TestE2E_HTTPServerPreferencesEndpoint(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 
 		if r.Method == http.MethodGet {
-			prefs, err := database.ListPreferencesByProject(nil)
+			prefs, _, err := database.ListPreferencesByProject(nil, 0, 0)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				_ = json.NewEncoder(w).Encode(map[string]string{"error": "failed to list preferences"})
@@ -535,8 +535,8 @@ func TestE2E_HTTPServerInjectEndpoint(t *testing.T) {
 			return
 		}
 
-		sessions, _ := database.ListSessions(db.SessionFilter{ProjectID: project.ID, Limit: 5})
-		prefs, _ := database.ListPreferencesByProject(&project.ID)
+		sessions, _, _ := database.ListSessions(db.SessionFilter{ProjectID: project.ID, Limit: 5})
+		prefs, _, _ := database.ListPreferencesByProject(&project.ID, 0, 0)
 
 		ctxOutput := context.BuildContext(context.ContextOptions{
 			Project:         project,
