@@ -103,14 +103,14 @@ func FormatSmartSummary(w io.Writer, dirty []db.Project, sessions []db.Session, 
 		for i, p := range stale {
 			names[i] = p.Name
 		}
-		fmt.Fprintf(w, "%s\n│\n", strings.Join(names, ", "))
+		_, _ = fmt.Fprintf(w, "%s\n│\n", strings.Join(names, ", "))
 	}
 
 	if len(dirty) == 0 && len(sessions) == 0 && len(stale) == 0 {
-		fmt.Fprintf(w, "│  No data yet. Run 'nexus scan' to discover projects.\n│\n")
+		_, _ = fmt.Fprintf(w, "│  No data yet. Run 'nexus scan' to discover projects.\n│\n")
 	}
 
-	fmt.Fprintf(w, "└────────────────────────────────────────────\n\n")
+	_, _ = fmt.Fprintf(w, "└────────────────────────────────────────────\n\n")
 }
 
 func FormatProjectTable(w io.Writer, projects []db.Project) {
@@ -418,11 +418,11 @@ func FormatWhere(w io.Writer, results []WhereResult) {
 	}
 	_, _ = fmt.Fprintln(w)
 	for _, r := range results {
-		fmt.Fprintln(w, r.ProjectName)
+		_, _ = fmt.Fprintln(w, r.ProjectName)
 		for _, f := range r.Files {
-			fmt.Fprintf(w, "  %-40s (sessions: %s)\n", f.Path, strings.Join(f.Sessions, ", "))
+			_, _ = fmt.Fprintf(w, "  %-40s (sessions: %s)\n", f.Path, strings.Join(f.Sessions, ", "))
 		}
-		fmt.Fprintln(w)
+		_, _ = fmt.Fprintln(w)
 	}
 }
 
@@ -535,7 +535,7 @@ func FormatContext(w io.Writer, p *db.Project, sessions []db.Session, notes []db
 			fmt.Fprintf(w, "- %s\n", lp.Name)
 		}
 	}
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w)
 }
 
 func FormatDeps(w io.Writer, results []ProjectDeps, cleanCount int) {

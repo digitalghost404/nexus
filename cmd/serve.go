@@ -427,7 +427,7 @@ var serveCmd = &cobra.Command{
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]interface{}{"results": results})
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"results": results})
 		})
 
 		// POST /api/inject — build smart context
@@ -546,7 +546,7 @@ var serveCmd = &cobra.Command{
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"queue_depth":   queueDepth,
 				"model":         cfg.OllamaModel,
 				"ollama_url":    cfg.OllamaURL,
@@ -594,7 +594,7 @@ type noteJSON struct {
 func jsonResponse(w http.ResponseWriter, code int, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]interface{}{"error": msg})
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"error": msg})
 }
 
 func init() {

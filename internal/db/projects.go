@@ -112,7 +112,7 @@ func (d *DB) ListProjects(status string) ([]Project, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list projects: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var projects []Project
 	for rows.Next() {
@@ -144,7 +144,7 @@ func (d *DB) ListDirtyProjects() ([]Project, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list dirty: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var projects []Project
 	for rows.Next() {

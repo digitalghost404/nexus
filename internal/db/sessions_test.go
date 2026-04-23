@@ -146,7 +146,7 @@ func TestGetSessionsInRange(t *testing.T) {
 	old := now.Add(-10 * 24 * time.Hour)
 	recent := now.Add(-1 * time.Hour)
 	_, _ = d.InsertSession(Session{ProjectID: pID, Summary: "old", Source: "wrapper", StartedAt: &old})
-	d.InsertSession(Session{ProjectID: pID, Summary: "recent", Source: "wrapper", StartedAt: &recent})
+	_, _ = d.InsertSession(Session{ProjectID: pID, Summary: "recent", Source: "wrapper", StartedAt: &recent})
 
 	since := now.Add(-7 * 24 * time.Hour)
 	sessions, err := d.GetSessionsInRange(pID, since, now)
@@ -165,8 +165,8 @@ func TestGetDistinctSessionDates(t *testing.T) {
 
 	day1 := now.Add(-48 * time.Hour)
 	day2 := now.Add(-24 * time.Hour)
-	d.InsertSession(Session{ProjectID: pID, Summary: "s1", Source: "wrapper", StartedAt: &day1})
-	d.InsertSession(Session{ProjectID: pID, Summary: "s2", Source: "wrapper", StartedAt: &day2})
+	_, _ = d.InsertSession(Session{ProjectID: pID, Summary: "s1", Source: "wrapper", StartedAt: &day1})
+	_, _ = d.InsertSession(Session{ProjectID: pID, Summary: "s2", Source: "wrapper", StartedAt: &day2})
 	d.InsertSession(Session{ProjectID: pID, Summary: "s3", Source: "wrapper", StartedAt: &now})
 
 	dates, err := d.GetDistinctSessionDates()

@@ -220,7 +220,7 @@ func TestDeleteContradictingInferredPreferences(t *testing.T) {
 	d := testDB(t)
 
 	_, _ = d.InsertPreference(Preference{Category: "workflow", Content: "Use tabs", Source: "inferred", Confidence: 0.4})
-	d.InsertPreference(Preference{Category: "workflow", Content: "Use spaces", Source: "stated", Confidence: 1.0})
+	_, _ = d.InsertPreference(Preference{Category: "workflow", Content: "Use spaces", Source: "stated", Confidence: 1.0})
 
 	deleted, err := d.DeleteContradictingInferredPreferences()
 	if err != nil {

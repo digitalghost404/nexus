@@ -32,7 +32,7 @@ var noteCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		p, _ := database.GetProjectByPath(absDir)
 		if p != nil {

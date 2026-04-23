@@ -100,7 +100,7 @@ func (d *DB) ListSessions(f SessionFilter) ([]Session, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list sessions: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var sessions []Session
 	for rows.Next() {
