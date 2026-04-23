@@ -839,7 +839,7 @@ func TestE2E_HTTPServerHealthEndpoint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET /api/v1/health: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
@@ -889,7 +889,7 @@ func TestE2E_HTTPServerAuthRequired(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET without auth: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("expected 401 without auth, got %d", resp.StatusCode)
 	}
@@ -901,7 +901,7 @@ func TestE2E_HTTPServerAuthRequired(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET with auth: %v", err)
 	}
-	defer resp2.Body.Close()
+	defer func() { _ = resp2.Body.Close() }()
 	if resp2.StatusCode != http.StatusOK {
 		t.Errorf("expected 200 with auth, got %d", resp2.StatusCode)
 	}
@@ -949,7 +949,7 @@ func TestE2E_HTTPServerPagination(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET paginated notes: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
@@ -989,7 +989,7 @@ func TestE2E_HTTPServerCaptureEndpoint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("POST /api/v1/capture: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
@@ -1016,7 +1016,7 @@ func TestE2E_HTTPServerPathTraversalRejected(t *testing.T) {
 	if err != nil {
 		t.Fatalf("POST /api/v1/capture path traversal: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("expected 400 for path traversal, got %d", resp.StatusCode)

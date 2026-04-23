@@ -118,7 +118,7 @@ func newProjectsDeleteCmd() *cobra.Command {
 				fmt.Printf("This will permanently delete project %q and all associated sessions, notes, preferences, and embeddings.\n", args[0])
 				fmt.Print("Type the project name to confirm: ")
 				var confirm string
-				fmt.Scanln(&confirm)
+				_, _ = fmt.Scanln(&confirm)
 				if confirm != args[0] {
 					fmt.Println("Deletion cancelled.")
 					return nil
