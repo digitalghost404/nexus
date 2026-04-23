@@ -77,11 +77,11 @@ func TestListPreferencesByProject(t *testing.T) {
 	_, _ = d.InsertPreference(Preference{ProjectID: &projID, Category: "workflow", Content: "Run clippy first", Source: "stated", Confidence: 1.0})
 	_, _ = d.InsertPreference(Preference{Category: "style", Content: "Terse responses", Source: "stated", Confidence: 1.0})
 
-	projPrefs, err := d.ListPreferencesByProject(&projID)
+	projPrefs, _, err := d.ListPreferencesByProject(&projID, 0, 0)
 	if err != nil {
 		t.Fatalf("ListPreferencesByProject(projID): %v", err)
 	}
-	globalPrefs, err := d.ListPreferencesByProject(nil)
+	globalPrefs, _, err := d.ListPreferencesByProject(nil, 0, 0)
 	if err != nil {
 		t.Fatalf("ListPreferencesByProject(nil): %v", err)
 	}
@@ -103,7 +103,7 @@ func TestListPreferencesByProjectExcludesLowConfidence(t *testing.T) {
 	_, _ = d.InsertPreference(Preference{ProjectID: &projID, Category: "workflow", Content: "High conf", Source: "stated", Confidence: 1.0})
 	_, _ = d.InsertPreference(Preference{ProjectID: &projID, Category: "pattern", Content: "Low conf", Source: "inferred", Confidence: 0.2})
 
-	projPrefs, err := d.ListPreferencesByProject(&projID)
+	projPrefs, _, err := d.ListPreferencesByProject(&projID, 0, 0)
 	if err != nil {
 		t.Fatalf("ListPreferencesByProject: %v", err)
 	}

@@ -96,16 +96,41 @@ func (d *DB) GetPreference(id int64) (*Preference, error) {
 	return p, nil
 }
 
-func (d *DB) ListPreferencesByProject(projectID *int64) ([]Preference, error) {
-	rows, err := d.db.Query(
-		"SELECT id, project_id, category, content, source, confidence, created_at, updated_at, last_referenced_at, access_count, superseded_by, superseded_at FROM preferences WHERE confidence > 0.3 AND superseded_by IS NULL AND (project_id = ? OR project_id IS NULL) ORDER BY confidence DESC",
-		projectID,
-	)
+func (d *DB) ListPreferencesByProject(projectID *int64, limit, offset int) ([]Preference, int, error) {
+	var countQuery string
+	var countArgs []interface{}
+
+	if projectID != nil {
+		countQuery = "SELECT COUNT(*) FROM preferences WHERE confidence > 0.3 AND superseded_by IS NULL AND (project_id = ? OR project_id IS NULL)"
+		countArgs = []interface{}{projectID}
+	} else {
+		countQuery = "SELECT COUNT(*) FROM preferences WHERE confidence > 0.3 AND superseded_by IS NULL AND project_id IS NULL"
+	}
+
+	var total int
+	if err := d.db.QueryRow(countQuery, countArgs...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count preferences: %w", err)
+	}
+
+	query := "SELECT id, project_id, category, content, source, confidence, created_at, updated_at, last_referenced_at, access_count, superseded_by, superseded_at FROM preferences WHERE confidence > 0.3 AND superseded_by IS NULL AND (project_id = ? OR project_id IS NULL) ORDER BY confidence DESC"
+	args := []interface{}{projectID}
+
+	if limit > 0 {
+		query += " LIMIT ?"
+		args = append(args, limit)
+	}
+	if offset > 0 {
+		query += " OFFSET ?"
+		args = append(args, offset)
+	}
+
+	rows, err := d.db.Query(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("list preferences by project: %w", err)
+		return nil, 0, fmt.Errorf("list preferences by project: %w", err)
 	}
 	defer func() { _ = rows.Close() }()
-	return scanPreferences(rows)
+	prefs, err := scanPreferences(rows)
+	return prefs, total, err
 }
 
 func (d *DB) SearchPreferences(query string) ([]Preference, error) {

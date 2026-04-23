@@ -25,21 +25,44 @@ func (d *DB) InsertNote(n Note) (int64, error) {
 	return result.LastInsertId()
 }
 
-func (d *DB) ListNotes(projectID int64, limit int) ([]Note, error) {
+func (d *DB) ListNotes(projectID int64, limit, offset int) ([]Note, int, error) {
+	var countQuery string
+	var countArgs []interface{}
+
+	if projectID > 0 {
+		countQuery = "SELECT COUNT(*) FROM notes WHERE project_id = ?"
+		countArgs = []interface{}{projectID}
+	} else {
+		countQuery = "SELECT COUNT(*) FROM notes"
+	}
+
+	var total int
+	if err := d.db.QueryRow(countQuery, countArgs...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count notes: %w", err)
+	}
+
 	var query string
 	var args []interface{}
 
 	if projectID > 0 {
-		query = "SELECT id, project_id, session_id, content, created_at FROM notes WHERE project_id = ? ORDER BY created_at DESC LIMIT ?"
-		args = []interface{}{projectID, limit}
+		query = "SELECT id, project_id, session_id, content, created_at FROM notes WHERE project_id = ? ORDER BY created_at DESC"
+		args = []interface{}{projectID}
 	} else {
-		query = "SELECT id, project_id, session_id, content, created_at FROM notes ORDER BY created_at DESC LIMIT ?"
-		args = []interface{}{limit}
+		query = "SELECT id, project_id, session_id, content, created_at FROM notes ORDER BY created_at DESC"
+	}
+
+	if limit > 0 {
+		query += " LIMIT ?"
+		args = append(args, limit)
+	}
+	if offset > 0 {
+		query += " OFFSET ?"
+		args = append(args, offset)
 	}
 
 	rows, err := d.db.Query(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("list notes: %w", err)
+		return nil, 0, fmt.Errorf("list notes: %w", err)
 	}
 	defer func() { _ = rows.Close() }()
 
@@ -47,14 +70,14 @@ func (d *DB) ListNotes(projectID int64, limit int) ([]Note, error) {
 	for rows.Next() {
 		var n Note
 		if err := rows.Scan(&n.ID, &n.ProjectID, &n.SessionID, &n.Content, &n.CreatedAt); err != nil {
-			return nil, fmt.Errorf("scan note: %w", err)
+			return nil, 0, fmt.Errorf("scan note: %w", err)
 		}
 		notes = append(notes, n)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate rows: %w", err)
+		return nil, 0, fmt.Errorf("iterate rows: %w", err)
 	}
-	return notes, nil
+	return notes, total, nil
 }
 
 func (d *DB) SearchNotes(query string) ([]Note, error) {

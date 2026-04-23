@@ -29,6 +29,7 @@ type SessionFilter struct {
 	ProjectID int64
 	Since     *time.Time
 	Limit     int
+	Offset    int
 }
 
 func (d *DB) InsertSession(s Session) (int64, error) {
@@ -69,7 +70,27 @@ func (d *DB) HasOverlappingSession(projectID int64, start, end time.Time) (bool,
 	return count > 0, nil
 }
 
-func (d *DB) ListSessions(f SessionFilter) ([]Session, error) {
+func (d *DB) ListSessions(f SessionFilter) ([]Session, int, error) {
+	countQuery := `
+		SELECT COUNT(*) FROM sessions s
+		JOIN projects p ON p.id = s.project_id
+		WHERE 1=1`
+	var countArgs []interface{}
+
+	if f.ProjectID > 0 {
+		countQuery += " AND s.project_id = ?"
+		countArgs = append(countArgs, f.ProjectID)
+	}
+	if f.Since != nil {
+		countQuery += " AND s.started_at >= ?"
+		countArgs = append(countArgs, f.Since)
+	}
+
+	var total int
+	if err := d.db.QueryRow(countQuery, countArgs...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count sessions: %w", err)
+	}
+
 	query := `
 		SELECT s.id, s.project_id, COALESCE(s.claude_session_id, ''),
 			s.started_at, s.ended_at, s.duration_secs, COALESCE(s.summary, ''),
@@ -95,10 +116,14 @@ func (d *DB) ListSessions(f SessionFilter) ([]Session, error) {
 		query += " LIMIT ?"
 		args = append(args, f.Limit)
 	}
+	if f.Offset > 0 {
+		query += " OFFSET ?"
+		args = append(args, f.Offset)
+	}
 
 	rows, err := d.db.Query(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("list sessions: %w", err)
+		return nil, 0, fmt.Errorf("list sessions: %w", err)
 	}
 	defer func() { _ = rows.Close() }()
 
@@ -109,14 +134,14 @@ func (d *DB) ListSessions(f SessionFilter) ([]Session, error) {
 			&s.StartedAt, &s.EndedAt, &s.DurationSecs, &s.Summary,
 			&s.FilesChanged, &s.CommitsMade, &s.Tags, &s.Source, &s.CreatedAt,
 			&s.ProjectName); err != nil {
-			return nil, fmt.Errorf("scan session: %w", err)
+			return nil, 0, fmt.Errorf("scan session: %w", err)
 		}
 		sessions = append(sessions, s)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate rows: %w", err)
+		return nil, 0, fmt.Errorf("iterate rows: %w", err)
 	}
-	return sessions, nil
+	return sessions, total, nil
 }
 
 func (d *DB) SearchSessions(query string) ([]Session, error) {

@@ -39,7 +39,7 @@ func TestGlobalNote(t *testing.T) {
 		t.Fatalf("insert global note: %v", err)
 	}
 
-	notes, err := d.ListNotes(0, 10)
+	notes, _, err := d.ListNotes(0, 10, 0)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}

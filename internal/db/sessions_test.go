@@ -28,7 +28,7 @@ func TestInsertAndListSessions(t *testing.T) {
 		t.Fatal("expected non-zero id")
 	}
 
-	sessions, err := d.ListSessions(SessionFilter{Limit: 10})
+	sessions, _, err := d.ListSessions(SessionFilter{Limit: 10})
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -51,7 +51,7 @@ func TestListSessionsByProject(t *testing.T) {
 	_, _ = d.InsertSession(Session{ProjectID: p2, Summary: "session 2", Source: "wrapper", StartedAt: &now})
 	_, _ = d.InsertSession(Session{ProjectID: p1, Summary: "session 3", Source: "wrapper", StartedAt: &now})
 
-	sessions, err := d.ListSessions(SessionFilter{ProjectID: p1, Limit: 10})
+	sessions, _, err := d.ListSessions(SessionFilter{ProjectID: p1, Limit: 10})
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
