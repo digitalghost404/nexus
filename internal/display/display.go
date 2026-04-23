@@ -201,11 +201,11 @@ func FormatProjectDetail(w io.Writer, p *db.Project, sessions []db.Session, stal
 	if len(staleBranches) > 0 {
 		_, _ = fmt.Fprintf(w, "│\n│  Stale Branches\n")
 		for _, b := range staleBranches {
-			fmt.Fprintf(w, "│  %s\n", b)
+			_, _ = fmt.Fprintf(w, "│  %s\n", b)
 		}
 	}
 
-	fmt.Fprintf(w, "│\n└────────────────────────────────────────────\n\n")
+	_, _ = fmt.Fprintf(w, "│\n└────────────────────────────────────────────\n\n")
 }
 
 func FormatSearchResults(w io.Writer, sessions []db.Session, notes []db.Note) {
@@ -215,7 +215,7 @@ func FormatSearchResults(w io.Writer, sessions []db.Session, notes []db.Note) {
 	}
 
 	if len(sessions) > 0 {
-		fmt.Fprintf(w, "\nSessions (%d)\n%s\n", len(sessions), strings.Repeat("─", 40))
+		_, _ = fmt.Fprintf(w, "\nSessions (%d)\n%s\n", len(sessions), strings.Repeat("─", 40))
 		for _, s := range sessions {
 			timeStr := ""
 			if s.StartedAt != nil {
