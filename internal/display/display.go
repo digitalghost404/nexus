@@ -188,18 +188,18 @@ func FormatProjectDetail(w io.Writer, p *db.Project, sessions []db.Session, stal
 	}
 
 	if len(sessions) > 0 {
-		fmt.Fprintf(w, "│\n│  Recent Sessions\n")
+		_, _ = fmt.Fprintf(w, "│\n│  Recent Sessions\n")
 		for _, s := range sessions {
 			timeStr := ""
 			if s.StartedAt != nil {
 				timeStr = RelativeTime(*s.StartedAt)
 			}
-			fmt.Fprintf(w, "│  %-14s \"%s\"\n", timeStr, truncate(s.Summary, 50))
+			_, _ = fmt.Fprintf(w, "│  %-14s \"%s\"\n", timeStr, truncate(s.Summary, 50))
 		}
 	}
 
 	if len(staleBranches) > 0 {
-		fmt.Fprintf(w, "│\n│  Stale Branches\n")
+		_, _ = fmt.Fprintf(w, "│\n│  Stale Branches\n")
 		for _, b := range staleBranches {
 			fmt.Fprintf(w, "│  %s\n", b)
 		}
