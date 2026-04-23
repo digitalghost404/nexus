@@ -984,7 +984,7 @@ func TestE2E_HTTPServerCaptureEndpoint(t *testing.T) {
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
 
-	jsonBody := []byte(`{"dir":"/home/digitalghost"}`)
+	jsonBody := []byte(`{"dir":"."}`)
 	resp, err := http.Post(ts.URL+"/api/v1/capture", "application/json", bytes.NewReader(jsonBody))
 	if err != nil {
 		t.Fatalf("POST /api/v1/capture: %v", err)
