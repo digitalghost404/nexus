@@ -17,9 +17,9 @@ func FormatProjectState(project *db.Project, sessions []db.Session) string {
 		b.WriteString("\n### Recent Activity\n")
 		for _, s := range sessions {
 			if s.StartedAt != nil {
-				fmt.Fprintf(&b, "- %s: %s\n", s.StartedAt.Format("2006-01-02"), s.Summary)
+				_, _ = fmt.Fprintf(&b, "- %s: %s\n", s.StartedAt.Format("2006-01-02"), s.Summary)
 			} else {
-				fmt.Fprintf(&b, "- %s\n", s.Summary)
+				_, _ = fmt.Fprintf(&b, "- %s\n", s.Summary)
 			}
 		}
 	}
@@ -52,7 +52,7 @@ func FormatRecall(results []RecallResult) string {
 			dateStr = r.Date.Format("2006-01-02") + ": "
 		}
 
-		fmt.Fprintf(&b, "- [%s] %s%s\n", label, dateStr, r.Content)
+		_, _ = fmt.Fprintf(&b, "- [%s] %s%s\n", label, dateStr, r.Content)
 	}
 
 	return b.String()
@@ -77,7 +77,7 @@ func FormatPreferences(prefs []db.Preference) string {
 		if p.Source != "stated" {
 			sourceTag = fmt.Sprintf(" (%s, %.0f%%)", p.Source, p.Confidence*100)
 		}
-		fmt.Fprintf(&b, "- [%s] %s%s\n", p.Category, p.Content, sourceTag)
+		_, _ = fmt.Fprintf(&b, "- [%s] %s%s\n", p.Category, p.Content, sourceTag)
 	}
 
 	return b.String()
@@ -89,14 +89,14 @@ func formatProjectHeader(project *db.Project) string {
 	}
 
 	var b strings.Builder
-	fmt.Fprintf(&b, "## Project: %s\n", project.Name)
-	fmt.Fprintf(&b, "**Branch**: %s | **Status**: %s", project.Branch, project.Status)
+	_, _ = fmt.Fprintf(&b, "## Project: %s\n", project.Name)
+	_, _ = fmt.Fprintf(&b, "**Branch**: %s | **Status**: %s", project.Branch, project.Status)
 
 	if !project.LastCommitAt.Valid {
 		b.WriteString(" | **Last commit**: none\n")
 	} else {
 		daysSince := int(time.Since(project.LastCommitAt.Time).Hours() / 24)
-		fmt.Fprintf(&b, " | **Last commit**: %s (%d days ago)\n", project.LastCommitMsg, daysSince)
+		_, _ = fmt.Fprintf(&b, " | **Last commit**: %s (%d days ago)\n", project.LastCommitMsg, daysSince)
 	}
 
 	return b.String()

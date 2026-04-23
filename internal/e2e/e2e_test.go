@@ -531,7 +531,7 @@ func TestE2E_HTTPServerInjectEndpoint(t *testing.T) {
 		project, err := database.GetProjectByName(body.Project)
 		if err != nil || project == nil {
 			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintf(w, `{"error":"project not found"}`)
+			_, _ = fmt.Fprintf(w, `{"error":"project not found"}`)
 			return
 		}
 

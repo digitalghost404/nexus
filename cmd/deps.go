@@ -52,7 +52,7 @@ var depsCmd = &cobra.Command{
 		cleanCount := 0
 
 		for _, p := range projects {
-			fmt.Fprintf(os.Stderr, "Checking %s...\n", p.Name)
+			_, _ = fmt.Fprintf(os.Stderr, "Checking %s...\n", p.Name)
 			var outdated []display.DepInfo
 			var manager string
 

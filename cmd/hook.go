@@ -194,7 +194,7 @@ var hookInstallCmd = &cobra.Command{
 				if err != nil {
 					return fmt.Errorf("open .zshrc: %w", err)
 				}
-				fmt.Fprintf(f, "\n# Nexus: auto-capture Claude sessions\n%s\n", canonicalWrapper)
+				_, _ = fmt.Fprintf(f, "\n# Nexus: auto-capture Claude sessions\n%s\n", canonicalWrapper)
 				if err := f.Close(); err != nil {
 					return fmt.Errorf("write .zshrc: %w", err)
 				}
@@ -220,7 +220,7 @@ var hookInstallCmd = &cobra.Command{
 				if err != nil {
 					return fmt.Errorf("open .bashrc: %w", err)
 				}
-				fmt.Fprintf(f, "\n# Nexus: auto-capture Claude sessions\n%s\n", canonicalWrapper)
+				_, _ = fmt.Fprintf(f, "\n# Nexus: auto-capture Claude sessions\n%s\n", canonicalWrapper)
 				if err := f.Close(); err != nil {
 					return fmt.Errorf("write .bashrc: %w", err)
 				}

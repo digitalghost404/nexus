@@ -362,7 +362,7 @@ var serveCmd = &cobra.Command{
 					case "session":
 						sessions, err := database.SearchSessions(body.Query)
 						if err != nil {
-							fmt.Fprintf(os.Stderr, "search sessions: %v\n", err)
+							_, _ = fmt.Fprintf(os.Stderr, "search sessions: %v\n", err)
 							continue
 						}
 						for _, s := range sessions {
@@ -376,7 +376,7 @@ var serveCmd = &cobra.Command{
 					case "note":
 						notes, err := database.SearchNotes(body.Query)
 						if err != nil {
-							fmt.Fprintf(os.Stderr, "search notes: %v\n", err)
+							_, _ = fmt.Fprintf(os.Stderr, "search notes: %v\n", err)
 							continue
 						}
 						for _, n := range notes {
@@ -390,7 +390,7 @@ var serveCmd = &cobra.Command{
 					case "preference":
 						prefs, err := database.SearchPreferences(body.Query)
 						if err != nil {
-							fmt.Fprintf(os.Stderr, "search preferences: %v\n", err)
+							_, _ = fmt.Fprintf(os.Stderr, "search preferences: %v\n", err)
 							continue
 						}
 						for _, p := range prefs {
@@ -472,7 +472,7 @@ var serveCmd = &cobra.Command{
 				for _, typ := range []string{"session", "note", "preference"} {
 					similar, sErr := database.SearchSimilar(vec, typ, 3, 0.7)
 					if sErr != nil {
-						fmt.Fprintf(os.Stderr, "search similar %s: %v\n", typ, sErr)
+						_, _ = fmt.Fprintf(os.Stderr, "search similar %s: %v\n", typ, sErr)
 						continue
 					}
 					for _, s := range similar {
@@ -572,7 +572,7 @@ var serveCmd = &cobra.Command{
 		case <-quit:
 			fmt.Println("\nShutting down Nexus API...")
 		case err := <-errCh:
-			fmt.Fprintf(os.Stderr, "serve: %v\n", err)
+			_, _ = fmt.Fprintf(os.Stderr, "serve: %v\n", err)
 			return err
 		}
 
