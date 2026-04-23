@@ -147,8 +147,14 @@ nexus projects                    # List all tracked projects
 nexus projects --active           # Only active projects
 nexus projects --dirty            # Projects with uncommitted changes
 nexus projects --stale            # Idle and stale projects
+nexus projects archive <name>     # Archive a project (hide from listings)
+nexus projects delete <name>      # Permanently delete a project and all data
+nexus projects delete <name> -f   # Skip confirmation prompt
 
-nexus sessions                    # Last 10 sessions
+nexus sessions                    # Last 50 sessions
+nexus sessions --limit 100        # Show more results
+nexus sessions --offset 50        # Skip first 50 results
+nexus sessions --all              # Show all results
 nexus sessions --project wraith   # Filter by project
 nexus sessions --since 7d         # Last 7 days
 nexus sessions --today            # Today only
@@ -200,12 +206,19 @@ nexus inject myproject --task "add rate limiting"  # Task-aware context
 
 nexus embed --backfill                         # Process all pending embeddings
 nexus embed --reembed                          # Re-embed changed content
+nexus embed --migrate-model                    # Re-embed all vectors with current model
 
-nexus maintain                                 # Run decay, prune, vacuum
+nexus backup run                               # Create a database backup
+nexus backup run --output /path/to/backup.db   # Custom output path
+nexus backup restore /path/to/backup.db        # Restore from backup
+
+nexus maintain                                 # Run decay, prune, vacuum, retention
 nexus maintain --decay-only                    # Confidence decay only
 nexus maintain --prune-only                    # Pruning only
 
 nexus preferences                              # List all preferences
+nexus preferences --limit 100                  # Show more results
+nexus preferences --all                        # Show all results
 nexus preferences --project myproject          # Project-scoped
 nexus preferences --category workflow          # Filter by category
 ```
@@ -214,10 +227,23 @@ nexus preferences --category workflow          # Filter by category
 
 ```bash
 nexus serve                    # Start HTTP API server (default port 7600)
-nexus serve --port 8080        # Custom port
+nexus serve --addr 127.0.0.1:8080  # Custom address
 ```
 
-The server runs an async embedding worker and exposes REST endpoints for MCP integration.
+The server runs an async embedding worker with retry/backoff and exposes REST endpoints for MCP integration.
+
+**Environment variables:**
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `NEXUS_API_TOKEN` | (empty) | Bearer token for API authentication |
+| `NEXUS_CORS_ORIGIN` | (empty) | Allowed CORS origin (comma-separated) |
+| `NEXUS_RATE_LIMIT` | `10` | Max requests/minute on `/api/v1/recall` |
+| `NEXUS_RETENTION_SESSIONS_DAYS` | `0` | Prune sessions older than N days (0 = disabled) |
+| `NEXUS_RETENTION_NOTES_DAYS` | `0` | Prune notes older than N days (0 = disabled) |
+| `NEXUS_RETENTION_PREFERENCES_DAYS` | `0` | Prune preferences older than N days (0 = disabled) |
+| `NEXUS_EMBEDDING_MODEL` | `nomic-embed-text` | Ollama embedding model name |
+| `NEXUS_EMBEDDING_DIMENSIONS` | `768` | Embedding vector dimensions |
 
 ### Maintenance Commands
 
@@ -309,8 +335,11 @@ If Ollama is unavailable, Nexus falls back to SQLite FTS5 keyword search — so 
 - Polls every 30 seconds for unembedded items
 - Batches up to 10 items at a time
 - Sends to Ollama's `/api/embed` endpoint
-- Stores vectors as BLOBs with metadata
-- Queues items when Ollama is down, processes when it returns
+- Stores vectors as BLOBs with metadata and status tracking
+- Retries with exponential backoff on failure (up to 3 retries)
+- Marks items as 'failed' after all retries exhausted
+- Checks Ollama health before each batch, skips if unavailable
+- Detects model mismatches and warns to run `--migrate-model`
 
 ### Context Builder (3-Pass Injection)
 
@@ -385,17 +414,18 @@ Projects that disappear from disk are automatically archived.
 
 When running `nexus serve`, these REST endpoints are available:
 
-| Endpoint | Method | Purpose |
-|---|---|---|
-| `/api/capture` | POST | Capture session from project directory |
-| `/api/notes` | GET, POST | List/create notes |
-| `/api/preferences` | GET, POST | List/create preferences |
-| `/api/preferences/{id}` | PATCH, DELETE | Update/delete preference |
-| `/api/recall` | POST | Semantic search (FTS5 fallback) |
-| `/api/inject` | POST | Build smart 3-pass context |
-| `/api/embed/status` | GET | Embedding queue status |
+| Endpoint | Method | Auth | Purpose |
+|---|---|---|---|
+| `/api/v1/health` | GET | No | Server health check |
+| `/api/v1/capture` | POST | Yes | Capture session from project directory |
+| `/api/v1/notes` | GET, POST | Yes | List/create notes |
+| `/api/v1/preferences` | GET, POST | Yes | List/create preferences |
+| `/api/v1/preferences/{id}` | PATCH, DELETE | Yes | Update/delete preference |
+| `/api/v1/recall` | POST | Yes | Semantic search (FTS5 fallback, rate-limited) |
+| `/api/v1/inject` | POST | Yes | Build smart 3-pass context |
+| `/api/v1/embed/status` | GET | Yes | Embedding queue status |
 
-All endpoints support CORS and return JSON (except `/api/inject` which returns `text/plain` markdown).
+All endpoints support CORS and return JSON (except `/api/v1/inject` which returns `text/plain` markdown). Set `NEXUS_API_TOKEN` to require Bearer token authentication. The health endpoint bypasses auth.
 
 ### Probe-Before-Write
 
@@ -450,7 +480,7 @@ All data lives in `~/.nexus/<agent>/`:
 
 ### Schema
 
-Current schema version: **5**. Tables:
+Current schema version: **6**. Tables:
 
 | Table | Purpose |
 |---|---|
