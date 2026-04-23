@@ -104,6 +104,11 @@ func Load(path string) (Config, error) {
 		cfg.Roots[i] = ExpandPath(r)
 	}
 
+	// Env var overrides (runtime config takes precedence over YAML)
+	if v := os.Getenv("NEXUS_EMBEDDING_MODEL"); v != "" {
+		cfg.OllamaModel = v
+	}
+
 	return cfg, nil
 }
 
