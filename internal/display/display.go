@@ -221,14 +221,14 @@ func FormatSearchResults(w io.Writer, sessions []db.Session, notes []db.Note) {
 			if s.StartedAt != nil {
 				timeStr = RelativeTime(*s.StartedAt)
 			}
-			fmt.Fprintf(w, "  %-14s %-14s %s\n", s.ProjectName, timeStr, s.Summary)
+			_, _ = fmt.Fprintf(w, "  %-14s %-14s %s\n", s.ProjectName, timeStr, s.Summary)
 		}
 	}
 
 	if len(notes) > 0 {
-		fmt.Fprintf(w, "\nNotes (%d)\n%s\n", len(notes), strings.Repeat("─", 40))
+		_, _ = fmt.Fprintf(w, "\nNotes (%d)\n%s\n", len(notes), strings.Repeat("─", 40))
 		for _, n := range notes {
-			fmt.Fprintf(w, "  %-14s %s\n", RelativeTime(n.CreatedAt), truncate(n.Content, 60))
+			_, _ = fmt.Fprintf(w, "  %-14s %s\n", RelativeTime(n.CreatedAt), truncate(n.Content, 60))
 		}
 	}
 	_, _ = fmt.Fprintln(w)
