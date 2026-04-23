@@ -25,7 +25,7 @@ func TestDefaultConfig(t *testing.T) {
 func TestLoadFromFile(t *testing.T) {
 	dir := t.TempDir()
 	cfgPath := filepath.Join(dir, "config.yaml")
-	os.WriteFile(cfgPath, []byte(`
+	_ = os.WriteFile(cfgPath, []byte(`
 roots:
   - /tmp/projects
 exclude:

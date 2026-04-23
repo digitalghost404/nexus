@@ -36,9 +36,10 @@ var rememberCmd = &cobra.Command{
 		}
 
 		confidence := 1.0
-		if source == "observed" {
+		switch source {
+		case "observed":
 			confidence = 0.7
-		} else if source == "inferred" {
+		case "inferred":
 			confidence = 0.4
 		}
 

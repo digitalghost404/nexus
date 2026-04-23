@@ -63,11 +63,11 @@ type StaleBranchInfo struct {
 }
 
 func FormatSmartSummary(w io.Writer, dirty []db.Project, sessions []db.Session, stale []db.Project, currentProject string) {
-	fmt.Fprintf(w, "\n┌ NEXUS ─────────────────────────────────────\n│\n")
+	_, _ = fmt.Fprintf(w, "\n┌ NEXUS ─────────────────────────────────────\n│\n")
 
 	// Show current project context if inside one
 	if currentProject != "" {
-		fmt.Fprintf(w, "│  📍 Current project: %s\n│\n", currentProject)
+		_, _ = fmt.Fprintf(w, "│  📍 Current project: %s\n│\n", currentProject)
 	}
 
 	// Dirty projects
@@ -115,7 +115,7 @@ func FormatSmartSummary(w io.Writer, dirty []db.Project, sessions []db.Session, 
 
 func FormatProjectTable(w io.Writer, projects []db.Project) {
 	if len(projects) == 0 {
-		fmt.Fprintln(w, "No projects found.")
+		_, _ = fmt.Fprintln(w, "No projects found.")
 		return
 	}
 
@@ -134,12 +134,12 @@ func FormatProjectTable(w io.Writer, projects []db.Project) {
 		fmt.Fprintf(w, "%-16s %-12s %-8s %-6s %s\n",
 			truncate(p.Name, 15), truncate(p.Branch, 11), p.Status, dirtyStr, commitTime)
 	}
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w)
 }
 
 func FormatSessionList(w io.Writer, sessions []db.Session) {
 	if len(sessions) == 0 {
-		fmt.Fprintln(w, "No sessions found.")
+		_, _ = fmt.Fprintln(w, "No sessions found.")
 		return
 	}
 

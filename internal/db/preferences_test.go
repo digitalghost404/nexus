@@ -55,9 +55,9 @@ func TestInsertPreferenceWithProject(t *testing.T) {
 func TestSearchPreferences(t *testing.T) {
 	d := testDB(t)
 
-	d.InsertPreference(Preference{Category: "style", Content: "Prefer terse responses", Source: "stated", Confidence: 1.0})
-	d.InsertPreference(Preference{Category: "tool", Content: "Use ollama for embeddings", Source: "stated", Confidence: 1.0})
-	d.InsertPreference(Preference{Category: "workflow", Content: "Always run clippy", Source: "observed", Confidence: 0.7})
+	_, _ = d.InsertPreference(Preference{Category: "style", Content: "Prefer terse responses", Source: "stated", Confidence: 1.0})
+	_, _ = d.InsertPreference(Preference{Category: "tool", Content: "Use ollama for embeddings", Source: "stated", Confidence: 1.0})
+	_, _ = d.InsertPreference(Preference{Category: "workflow", Content: "Always run clippy", Source: "observed", Confidence: 0.7})
 
 	results, err := d.SearchPreferences("embeddings")
 	if err != nil {
@@ -237,7 +237,7 @@ func TestDeleteSupersededPreferences(t *testing.T) {
 	id1, _ := d.InsertPreference(Preference{Category: "workflow", Content: "Old way", Source: "stated", Confidence: 1.0})
 	id2, _ := d.InsertPreference(Preference{Category: "workflow", Content: "New way", Source: "stated", Confidence: 1.0})
 
-	d.SupersedePreference(id1, id2)
+	_ = d.SupersedePreference(id1, id2)
 
 	deleted, err := d.DeleteSupersededPreferences(0)
 	if err != nil {

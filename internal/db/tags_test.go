@@ -12,8 +12,8 @@ func TestAddAndListSessionTags(t *testing.T) {
 	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 	sID, _ := d.InsertSession(Session{ProjectID: pID, Summary: "test", Source: "wrapper", StartedAt: &now})
 
-	d.AddSessionTag(sID, "breakthrough")
-	d.AddSessionTag(sID, "important")
+	_ = d.AddSessionTag(sID, "breakthrough")
+	_ = d.AddSessionTag(sID, "important")
 
 	tags, _ := d.ListSessionTags(sID)
 	if len(tags) != 2 {
@@ -27,8 +27,8 @@ func TestRemoveSessionTag(t *testing.T) {
 	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 	sID, _ := d.InsertSession(Session{ProjectID: pID, Summary: "test", Source: "wrapper", StartedAt: &now})
 
-	d.AddSessionTag(sID, "remove-me")
-	d.RemoveSessionTag(sID, "remove-me")
+	_ = d.AddSessionTag(sID, "remove-me")
+	_ = d.RemoveSessionTag(sID, "remove-me")
 
 	tags, _ := d.ListSessionTags(sID)
 	if len(tags) != 0 {

@@ -65,7 +65,7 @@ func GetAheadBehind(dir string) (ahead, behind int, err error) {
 		// No upstream configured
 		return 0, 0, nil
 	}
-	fmt.Sscanf(out, "%d\t%d", &ahead, &behind)
+	_, _ = fmt.Sscanf(out, "%d\t%d", &ahead, &behind)
 	return ahead, behind, nil
 }
 
@@ -222,7 +222,7 @@ var langMap = map[string]string{
 
 func DetectLanguages(dir string) []string {
 	seen := map[string]bool{}
-	filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+	_ = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}

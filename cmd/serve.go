@@ -212,9 +212,10 @@ var serveCmd = &cobra.Command{
 				}
 
 				confidence := 1.0
-				if body.Source == "observed" {
+				switch body.Source {
+				case "observed":
 					confidence = 0.7
-				} else if body.Source == "inferred" {
+				case "inferred":
 					confidence = 0.4
 				}
 

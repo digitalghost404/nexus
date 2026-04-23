@@ -47,9 +47,9 @@ func TestListSessionsByProject(t *testing.T) {
 	p1, _ := d.UpsertProject(Project{Name: "proj1", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 	p2, _ := d.UpsertProject(Project{Name: "proj2", Path: "/b", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 
-	d.InsertSession(Session{ProjectID: p1, Summary: "session 1", Source: "wrapper", StartedAt: &now})
-	d.InsertSession(Session{ProjectID: p2, Summary: "session 2", Source: "wrapper", StartedAt: &now})
-	d.InsertSession(Session{ProjectID: p1, Summary: "session 3", Source: "wrapper", StartedAt: &now})
+	_, _ = d.InsertSession(Session{ProjectID: p1, Summary: "session 1", Source: "wrapper", StartedAt: &now})
+	_, _ = d.InsertSession(Session{ProjectID: p2, Summary: "session 2", Source: "wrapper", StartedAt: &now})
+	_, _ = d.InsertSession(Session{ProjectID: p1, Summary: "session 3", Source: "wrapper", StartedAt: &now})
 
 	sessions, err := d.ListSessions(SessionFilter{ProjectID: p1, Limit: 10})
 	if err != nil {

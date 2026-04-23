@@ -21,7 +21,7 @@ func openTestDB(t *testing.T) *db.DB {
 	if err != nil {
 		t.Fatalf("open test db: %v", err)
 	}
-	t.Cleanup(func() { d.Close() })
+	t.Cleanup(func() { _ = d.Close() })
 	return d
 }
 
@@ -226,10 +226,10 @@ func TestE2E_HTTPServerPreferencesEndpoint(t *testing.T) {
 			prefs, err := database.ListPreferencesByProject(nil)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
-				json.NewEncoder(w).Encode(map[string]string{"error": "failed to list preferences"})
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "failed to list preferences"})
 				return
 			}
-			json.NewEncoder(w).Encode(map[string]interface{}{"preferences": prefs})
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"preferences": prefs})
 			return
 		}
 
@@ -252,9 +252,10 @@ func TestE2E_HTTPServerPreferencesEndpoint(t *testing.T) {
 			}
 
 			confidence := 1.0
-			if body.Source == "observed" {
+			switch body.Source {
+			case "observed":
 				confidence = 0.7
-			} else if body.Source == "inferred" {
+			case "inferred":
 				confidence = 0.4
 			}
 
@@ -271,7 +272,7 @@ func TestE2E_HTTPServerPreferencesEndpoint(t *testing.T) {
 			}
 
 			w.WriteHeader(http.StatusCreated)
-			json.NewEncoder(w).Encode(map[string]interface{}{"id": id, "content": body.Content})
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"id": id, "content": body.Content})
 			return
 		}
 
@@ -292,7 +293,7 @@ func TestE2E_HTTPServerPreferencesEndpoint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("POST /api/preferences: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusCreated {
 		t.Errorf("expected 201 Created, got %d", resp.StatusCode)
@@ -311,7 +312,7 @@ func TestE2E_HTTPServerPreferencesEndpoint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET /api/preferences: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var listResp map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
@@ -445,7 +446,7 @@ func TestE2E_HTTPServerRecallEndpoint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("POST /api/recall: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected 200 OK, got %d", resp.StatusCode)
@@ -566,7 +567,7 @@ func TestE2E_HTTPServerInjectEndpoint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("POST /api/inject: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected 200 OK, got %d", resp.StatusCode)
@@ -641,7 +642,7 @@ func TestE2E_HTTPServerEmbedStatusEndpoint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET /api/embed/status: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected 200 OK, got %d", resp.StatusCode)
@@ -691,7 +692,7 @@ func TestE2E_HTTPServerEmbedStatusEndpoint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET /api/embed/status (after insert): %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if err := json.NewDecoder(resp.Body).Decode(&statusResp); err != nil {
 		t.Fatalf("decode status response (after insert): %v", err)

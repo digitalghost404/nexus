@@ -13,7 +13,7 @@ func TestDiscoverProjects(t *testing.T) {
 	// Create 3 git repos
 	CreateTestRepo(t, filepath.Join(root, "project-a"))
 	CreateTestRepo(t, filepath.Join(root, "project-b"))
-	os.MkdirAll(filepath.Join(root, "not-a-repo"), 0755) // no .git
+	_ = os.MkdirAll(filepath.Join(root, "not-a-repo"), 0755) // no .git
 
 	// Nested repo
 	CreateTestRepo(t, filepath.Join(root, "nested", "project-c"))
@@ -47,7 +47,7 @@ func TestDiscoverSkipsNestedGit(t *testing.T) {
 	repo := CreateTestRepo(t, filepath.Join(root, "project"))
 
 	// Create node_modules with its own .git (shouldn't be discovered)
-	os.MkdirAll(filepath.Join(repo, "node_modules", "some-pkg", ".git"), 0755)
+	_ = os.MkdirAll(filepath.Join(repo, "node_modules", "some-pkg", ".git"), 0755)
 
 	projects, err := Discover([]string{root}, []string{"*/node_modules/*"})
 	if err != nil {

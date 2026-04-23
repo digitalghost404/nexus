@@ -139,9 +139,10 @@ func (d *DB) DecayPreferences() error {
 		}
 
 		halfLife := halfLifeStated
-		if source == "observed" {
+		switch source {
+		case "observed":
 			halfLife = halfLifeObserved
-		} else if source == "inferred" {
+		case "inferred":
 			halfLife = halfLifeInferred
 		}
 
@@ -152,9 +153,10 @@ func (d *DB) DecayPreferences() error {
 		daysSinceAccess := now.Sub(lastAccess).Hours() / 24.0
 
 		initialConf := 1.0
-		if source == "observed" {
+		switch source {
+		case "observed":
 			initialConf = 0.7
-		} else if source == "inferred" {
+		case "inferred":
 			initialConf = 0.4
 		}
 

@@ -35,7 +35,7 @@ func TestGetDirtyFiles(t *testing.T) {
 	}
 
 	// Create untracked file
-	os.WriteFile(filepath.Join(repo, "new.txt"), []byte("new"), 0644)
+	_ = os.WriteFile(filepath.Join(repo, "new.txt"), []byte("new"), 0644)
 	count, _ = GetDirtyFileCount(repo)
 	if count != 1 {
 		t.Errorf("expected 1 dirty, got %d", count)
@@ -82,7 +82,7 @@ func TestDeleteBranch(t *testing.T) {
 	run := func(args ...string) {
 		cmd := exec.Command("git", args...)
 		cmd.Dir = repo
-		cmd.CombinedOutput()
+		_, _ = cmd.CombinedOutput()
 	}
 	run("checkout", "-b", "feature-old")
 	run("checkout", "main")

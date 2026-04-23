@@ -17,9 +17,9 @@ func FormatProjectState(project *db.Project, sessions []db.Session) string {
 		b.WriteString("\n### Recent Activity\n")
 		for _, s := range sessions {
 			if s.StartedAt != nil {
-				b.WriteString(fmt.Sprintf("- %s: %s\n", s.StartedAt.Format("2006-01-02"), s.Summary))
+				fmt.Fprintf(&b, "- %s: %s\n", s.StartedAt.Format("2006-01-02"), s.Summary)
 			} else {
-				b.WriteString(fmt.Sprintf("- %s\n", s.Summary))
+				fmt.Fprintf(&b, "- %s\n", s.Summary)
 			}
 		}
 	}
@@ -52,7 +52,7 @@ func FormatRecall(results []RecallResult) string {
 			dateStr = r.Date.Format("2006-01-02") + ": "
 		}
 
-		b.WriteString(fmt.Sprintf("- [%s] %s%s\n", label, dateStr, r.Content))
+		fmt.Fprintf(&b, "- [%s] %s%s\n", label, dateStr, r.Content)
 	}
 
 	return b.String()

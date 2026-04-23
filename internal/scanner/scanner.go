@@ -19,7 +19,7 @@ func Discover(roots []string, exclude []string) ([]string, error) {
 			continue
 		}
 
-		filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 			if err != nil {
 				return nil
 			}

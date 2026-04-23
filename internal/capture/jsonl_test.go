@@ -14,7 +14,7 @@ func writeJSONL(t *testing.T, lines []string) string {
 	if err != nil {
 		t.Fatalf("create temp file: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	for _, line := range lines {
 		if _, err := f.WriteString(line + "\n"); err != nil {
 			t.Fatalf("write temp file: %v", err)

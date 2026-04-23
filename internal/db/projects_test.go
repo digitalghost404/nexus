@@ -47,9 +47,9 @@ func TestListProjectsByStatus(t *testing.T) {
 	d := testDB(t)
 
 	now := time.Now()
-	d.UpsertProject(Project{Name: "active1", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
-	d.UpsertProject(Project{Name: "stale1", Path: "/b", Status: "stale", DiscoveredAt: NullTime{Time: now, Valid: true}})
-	d.UpsertProject(Project{Name: "active2", Path: "/c", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
+	_, _ = d.UpsertProject(Project{Name: "active1", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
+	_, _ = d.UpsertProject(Project{Name: "stale1", Path: "/b", Status: "stale", DiscoveredAt: NullTime{Time: now, Valid: true}})
+	_, _ = d.UpsertProject(Project{Name: "active2", Path: "/c", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 
 	active, err := d.ListProjects("active")
 	if err != nil {

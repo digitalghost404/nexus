@@ -52,7 +52,7 @@ func (l *Logger) Debug(msg string, args ...interface{}) {
 		return
 	}
 	formatted := fmt.Sprintf(msg, args...)
-	fmt.Fprintf(l.stderr, "[DEBUG] %s\n", formatted)
+	_, _ = fmt.Fprintf(l.stderr, "[DEBUG] %s\n", formatted)
 }
 
 func (l *Logger) Error(msg string, args ...interface{}) {
@@ -81,9 +81,9 @@ func (l *Logger) writeToFile(line string) {
 }
 
 func (l *Logger) rotate() {
-	l.file.Close()
+	_ = l.file.Close()
 	l.file = nil
-	os.Truncate(l.cfg.LogFile, 0)
+	_ = os.Truncate(l.cfg.LogFile, 0)
 	f, err := os.OpenFile(l.cfg.LogFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if err == nil {
 		l.file = f
@@ -93,6 +93,6 @@ func (l *Logger) rotate() {
 
 func (l *Logger) Close() {
 	if l.file != nil {
-		l.file.Close()
+		_ = l.file.Close()
 	}
 }

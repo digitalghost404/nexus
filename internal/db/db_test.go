@@ -211,7 +211,7 @@ func TestMigrationV4ToV5(t *testing.T) {
 	if err != nil {
 		t.Errorf("preferences table missing expected columns: %v", err)
 	} else {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 	}
 
 	// Verify embedding_meta table has correct columns
@@ -219,7 +219,7 @@ func TestMigrationV4ToV5(t *testing.T) {
 	if err != nil {
 		t.Errorf("embedding_meta table missing expected columns: %v", err)
 	} else {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 	}
 
 	// Verify embeddings table has correct columns
@@ -227,6 +227,6 @@ func TestMigrationV4ToV5(t *testing.T) {
 	if err != nil {
 		t.Errorf("embeddings table missing expected columns: %v", err)
 	} else {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 	}
 }

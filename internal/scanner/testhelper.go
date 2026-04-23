@@ -12,7 +12,7 @@ import (
 // Exported for use by other packages (e.g., capture tests).
 func CreateTestRepo(t *testing.T, dir string) string {
 	t.Helper()
-	os.MkdirAll(dir, 0755)
+	_ = os.MkdirAll(dir, 0755)
 
 	run := func(args ...string) {
 		cmd := exec.Command("git", args...)

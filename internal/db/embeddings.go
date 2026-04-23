@@ -127,11 +127,11 @@ func getContentForSource(db *sql.DB, sourceType string, sourceID int64) string {
 	var content string
 	switch sourceType {
 	case "session":
-		db.QueryRow("SELECT summary FROM sessions WHERE id = ?", sourceID).Scan(&content)
+		_ = db.QueryRow("SELECT summary FROM sessions WHERE id = ?", sourceID).Scan(&content)
 	case "note":
-		db.QueryRow("SELECT content FROM notes WHERE id = ?", sourceID).Scan(&content)
+		_ = db.QueryRow("SELECT content FROM notes WHERE id = ?", sourceID).Scan(&content)
 	case "preference":
-		db.QueryRow("SELECT content FROM preferences WHERE id = ?", sourceID).Scan(&content)
+		_ = db.QueryRow("SELECT content FROM preferences WHERE id = ?", sourceID).Scan(&content)
 	}
 	return content
 }
