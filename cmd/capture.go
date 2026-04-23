@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/digitalghost404/nexus/internal/capture"
@@ -25,18 +26,25 @@ var captureCmd = &cobra.Command{
 		}
 
 		// Probe-before-write: try HTTP POST to serve endpoint first
-		probeURL := fmt.Sprintf("http://127.0.0.1:%d/api/capture", cfg.ServePort)
+		probeURL := fmt.Sprintf("http://127.0.0.1:%d/api/v1/capture", cfg.ServePort)
 		body, err := json.Marshal(map[string]string{"dir": captureDir})
 		if err == nil {
 			client := &http.Client{Timeout: 2 * time.Second}
-			resp, err := client.Post(probeURL, "application/json", bytes.NewReader(body))
+			req, err := http.NewRequest(http.MethodPost, probeURL, bytes.NewReader(body))
 			if err == nil {
-				defer func() { _ = resp.Body.Close() }()
-				if resp.StatusCode == http.StatusOK {
-					if debug {
-						fmt.Printf("Captured session via serve API (online mode)\n")
+				req.Header.Set("Content-Type", "application/json")
+				if token := os.Getenv("NEXUS_API_TOKEN"); token != "" {
+					req.Header.Set("Authorization", "Bearer "+token)
+				}
+				resp, err := client.Do(req)
+				if err == nil {
+					defer func() { _ = resp.Body.Close() }()
+					if resp.StatusCode == http.StatusOK {
+						if debug {
+							fmt.Printf("Captured session via serve API (online mode)\n")
+						}
+						return nil
 					}
-					return nil
 				}
 			}
 		}
