@@ -51,6 +51,11 @@ func (h *Handler) Capture(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := ValidatePath(body.Dir); err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	result, err := capture.CaptureSession(h.db, body.Dir, "")
 	if err != nil {
 		jsonError(w, "capture failed", http.StatusInternalServerError)

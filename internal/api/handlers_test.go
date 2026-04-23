@@ -68,8 +68,8 @@ func TestCapture_PathTraversal(t *testing.T) {
 
 	h.Capture(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d: %s", w.Code, w.Body.String())
 	}
 }
 
@@ -82,8 +82,8 @@ func TestCapture_AbsoluteOutsideHome(t *testing.T) {
 
 	h.Capture(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d: %s", w.Code, w.Body.String())
 	}
 }
 
@@ -236,7 +236,7 @@ func TestAuthMiddleware_WithoutToken(t *testing.T) {
 	}
 }
 
-func TestAuthMiddleware_ValidToken(t *testing.T) {
+func TestAuthMiddleware_WrongToken(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})

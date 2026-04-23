@@ -9,9 +9,10 @@ import (
 )
 
 type PaginatedResponse[T any] struct {
-	Data  []T `json:"data"`
-	Total int `json:"total"`
-	Limit int `json:"limit"`
+	Data   []T `json:"data"`
+	Total  int `json:"total"`
+	Limit  int `json:"limit"`
+	Offset int `json:"offset"`
 }
 
 type ErrorResponse struct {
@@ -48,31 +49,22 @@ type HealthResponse struct {
 	EmbedQueueDepth int  `json:"embed_queue_depth"`
 }
 
-var safePathRe = regexp.MustCompile(`^[a-zA-Z0-9._\-/]+$`)
-
 func ValidatePath(dir string) error {
-	if !safePathRe.MatchString(dir) {
-		return fmt.Errorf("path contains invalid characters")
+	if !regexp.MustCompile(`^[a-zA-Z0-9_./-]+$`).MatchString(dir) {
+		return fmt.Errorf("dir contains invalid characters")
 	}
-
-	cleaned := dir
-	if strings.Contains(dir, "..") {
-		return fmt.Errorf("path traversal not allowed")
+	cleaned := filepath.Clean(dir)
+	if strings.Contains(cleaned, "..") {
+		return fmt.Errorf("dir contains path traversal")
 	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("cannot determine home directory")
+	if filepath.IsAbs(cleaned) {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("cannot determine home directory")
+		}
+		if !strings.HasPrefix(cleaned, home) {
+			return fmt.Errorf("dir is outside home directory")
+		}
 	}
-
-	abs, err := filepath.Abs(cleaned)
-	if err != nil {
-		return fmt.Errorf("cannot resolve path: %w", err)
-	}
-
-	if !strings.HasPrefix(abs, home) {
-		return fmt.Errorf("path must be within home directory")
-	}
-
 	return nil
 }
