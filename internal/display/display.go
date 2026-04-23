@@ -166,14 +166,14 @@ func FormatProjectDetail(w io.Writer, p *db.Project, sessions []db.Session, stal
 
 	_, _ = fmt.Fprintf(w, "│  Path:      %s\n", p.Path)
 	_, _ = fmt.Fprintf(w, "│  Branch:    %s\n", p.Branch)
-	fmt.Fprintf(w, "│  Status:    %s\n", p.Status)
+	_, _ = fmt.Fprintf(w, "│  Status:    %s\n", p.Status)
 
 	if p.Dirty {
-		fmt.Fprintf(w, "│  Dirty:     %d file(s)\n", p.DirtyFiles)
+		_, _ = fmt.Fprintf(w, "│  Dirty:     %d file(s)\n", p.DirtyFiles)
 	}
 
 	if p.LastCommitAt.Valid {
-		fmt.Fprintf(w, "│  Commit:    %s (%s)\n", RelativeTime(p.LastCommitAt.Time), p.LastCommitMsg)
+		_, _ = fmt.Fprintf(w, "│  Commit:    %s (%s)\n", RelativeTime(p.LastCommitAt.Time), p.LastCommitMsg)
 	}
 
 	if p.Ahead > 0 || p.Behind > 0 {

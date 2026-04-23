@@ -25,7 +25,7 @@ var staleCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		// Get idle and stale projects
 		idle, err := database.ListProjects("idle")

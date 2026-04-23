@@ -26,7 +26,7 @@ var sessionsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		if sessionsTag != "" {
 			taggedSessions, err := database.ListSessionsByTag(sessionsTag)
