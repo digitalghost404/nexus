@@ -42,6 +42,24 @@ func (w *Worker) Start() {
 	go w.run()
 }
 
+func (w *Worker) CheckModelCompatibility() error {
+	if w.db == nil {
+		return nil
+	}
+	var existingModel sql.NullString
+	err := w.db.QueryRow("SELECT DISTINCT embedding_model FROM embedding_meta WHERE embedding_model IS NOT NULL AND embedding_model != '' LIMIT 1").Scan(&existingModel)
+	if err == sql.ErrNoRows {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("check existing model: %w", err)
+	}
+	if existingModel.Valid && existingModel.String != w.client.Model() {
+		return fmt.Errorf("model mismatch: existing=%s, configured=%s. Run 'nexus embed --migrate-model'", existingModel.String, w.client.Model())
+	}
+	return nil
+}
+
 func (w *Worker) Stop() {
 	w.stopOnce.Do(func() { close(w.stop) })
 }

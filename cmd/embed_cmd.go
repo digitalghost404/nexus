@@ -12,12 +12,13 @@ import (
 
 var embedCmd = &cobra.Command{
 	Use:   "embed",
-	Short: "Manage embedding queue (backfill, re-embed)",
+	Short: "Manage embedding queue (backfill, re-embed, migrate model)",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		backfill, _ := cmd.Flags().GetBool("backfill")
 		reembed, _ := cmd.Flags().GetBool("reembed")
+		migrateModel, _ := cmd.Flags().GetBool("migrate-model")
 
-		if !backfill && !reembed {
+		if !backfill && !reembed && !migrateModel {
 			_ = cmd.Usage()
 			return nil
 		}
@@ -29,6 +30,10 @@ var embedCmd = &cobra.Command{
 		defer func() { _ = database.Close() }()
 
 		client := embed.NewClient(cfg.OllamaURL, cfg.OllamaModel, &http.Client{Timeout: 5 * time.Second})
+
+		if migrateModel {
+			return handleMigrateModel(database, client)
+		}
 
 		if reembed {
 			return handleReembed(database, client)
@@ -107,6 +112,27 @@ func handleReembed(database *db.DB, client *embed.Client) error {
 	return nil
 }
 
+func handleMigrateModel(database *db.DB, client *embed.Client) error {
+	model := client.Model()
+
+	result, err := database.Conn().Exec("DELETE FROM embeddings")
+	if err != nil {
+		return fmt.Errorf("delete all embeddings: %w", err)
+	}
+	deletedVecs, _ := result.RowsAffected()
+
+	result, err = database.Conn().Exec("UPDATE embedding_meta SET status = 'pending', model_name = NULL")
+	if err != nil {
+		return fmt.Errorf("reset embedding meta: %w", err)
+	}
+	resetMeta, _ := result.RowsAffected()
+
+	fmt.Printf("Reset %d embedding meta records and deleted %d vectors.\n", resetMeta, deletedVecs)
+	fmt.Printf("Migrating to model %q. Starting backfill...\n", model)
+
+	return handleBackfill(database, client, nil)
+}
+
 type unembeddedItem struct {
 	sourceType string
 	sourceID   int64
@@ -157,5 +183,6 @@ func init() {
 	embedCmd.GroupID = "maintenance"
 	embedCmd.Flags().Bool("backfill", false, "Embed all unembedded items in batches")
 	embedCmd.Flags().Bool("reembed", false, "Invalidate all vectors for current model")
+	embedCmd.Flags().Bool("migrate-model", false, "Re-embed all vectors with current model")
 	rootCmd.AddCommand(embedCmd)
 }
