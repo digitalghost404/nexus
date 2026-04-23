@@ -79,8 +79,8 @@ func TestSchemaVersion(t *testing.T) {
 	if err := d.db.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
 		t.Fatalf("query user_version: %v", err)
 	}
-	if version != 5 {
-		t.Errorf("expected user_version=5, got: %d", version)
+	if version != 6 {
+		t.Errorf("expected user_version=6, got: %d", version)
 	}
 }
 
@@ -122,13 +122,13 @@ func TestMigrationV1ToV2(t *testing.T) {
 		t.Fatalf("session_conversations table missing: %v", err)
 	}
 
-	// Verify version is now 5 (v1 migrates through v2, v3, v4, and v5)
+	// Verify version is now 6 (v1 migrates through v2, v3, v4, v5, and v6)
 	var version int
 	if err := d.db.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
 		t.Fatalf("query user_version: %v", err)
 	}
-	if version != 5 {
-		t.Errorf("expected user_version=5, got %d", version)
+	if version != 6 {
+		t.Errorf("expected user_version=6, got %d", version)
 	}
 
 	// Verify existing data survived
@@ -163,13 +163,13 @@ func TestMigrationV4ToV5(t *testing.T) {
 	}
 	defer func() { _ = d.Close() }()
 
-	// Verify version is 5
+	// Verify version is 6
 	var version int
 	if err := d.db.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
 		t.Fatalf("query user_version: %v", err)
 	}
-	if version != 5 {
-		t.Errorf("expected user_version=5, got %d", version)
+	if version != 6 {
+		t.Errorf("expected user_version=6, got %d", version)
 	}
 
 	// Verify preferences table exists
@@ -215,7 +215,7 @@ func TestMigrationV4ToV5(t *testing.T) {
 	}
 
 	// Verify embedding_meta table has correct columns
-	rows, err = d.db.Query("SELECT id, source_type, source_id, content_hash, content_truncated, embedded_at, embedding_model FROM embedding_meta LIMIT 0")
+	rows, err = d.db.Query("SELECT id, source_type, source_id, content_hash, content_truncated, embedded_at, embedding_model, status, model_name, dimensions FROM embedding_meta LIMIT 0")
 	if err != nil {
 		t.Errorf("embedding_meta table missing expected columns: %v", err)
 	} else {

@@ -25,6 +25,9 @@ var migrationV4SQL string
 //go:embed migration_v5.sql
 var migrationV5SQL string
 
+//go:embed migration_v6.sql
+var migrationV6SQL string
+
 type DB struct {
 	db *sql.DB
 }
@@ -67,6 +70,7 @@ var migrations = []migration{
 	{3, migrateV3},
 	{4, migrateV4},
 	{5, migrateV5},
+	{6, migrateV6},
 }
 
 func migrateV1(tx *sql.Tx) error {
@@ -94,13 +98,18 @@ func migrateV5(tx *sql.Tx) error {
 	return err
 }
 
+func migrateV6(tx *sql.Tx) error {
+	_, err := tx.Exec(migrationV6SQL)
+	return err
+}
+
 func (d *DB) migrate() error {
 	var version int
 	if err := d.db.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
 		return fmt.Errorf("read schema version: %w", err)
 	}
 
-	const currentVersion = 5
+	const currentVersion = 6
 	if version > currentVersion {
 		return fmt.Errorf("database schema version %d is newer than supported version %d — upgrade nexus", version, currentVersion)
 	}

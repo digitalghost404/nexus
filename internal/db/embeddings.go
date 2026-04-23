@@ -49,8 +49,8 @@ func (d *DB) StoreEmbedding(sourceType string, sourceID int64, content string, v
 	hash := contentHash(content)
 
 	_, err = tx.Exec(
-		`INSERT INTO embedding_meta (id, source_type, source_id, content_hash, content_truncated, embedded_at, embedding_model)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO embedding_meta (id, source_type, source_id, content_hash, content_truncated, embedded_at, embedding_model, status)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, 'done')`,
 		embID, sourceType, sourceID, hash, truncated || wasTruncated, time.Now(), model,
 	)
 	if err != nil {

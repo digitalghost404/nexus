@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/http"
 	"strconv"
 	"sync"
 	"time"
@@ -72,6 +73,10 @@ func (w *Worker) embedPending() {
 		return
 	}
 
+	if !w.isOllamaAvailable() {
+		return
+	}
+
 	items, err := w.getUnembeddedItems(embedBatchSize)
 	if err != nil {
 		log.Printf("embed worker: get unembedded items: %v", err)
@@ -93,8 +98,27 @@ func (w *Worker) embedPending() {
 
 	vecs, err := w.client.EmbedBatch(ctx, texts)
 	if err != nil {
-		log.Printf("embed worker: embed batch: %v", err)
-		return
+		for retry := 0; retry < 3; retry++ {
+			delay := time.Duration(1<<uint(retry)) * time.Second
+			if delay > 30*time.Second {
+				delay = 30 * time.Second
+			}
+			log.Printf("embed worker: retry %d/%d after %v: %v", retry+1, 3, delay, err)
+			select {
+			case <-time.After(delay):
+			case <-w.stop:
+				return
+			}
+			vecs, err = w.client.EmbedBatch(ctx, texts)
+			if err == nil {
+				break
+			}
+		}
+		if err != nil {
+			log.Printf("embed worker: all retries exhausted, marking %d items as failed: %v", len(items), err)
+			w.markFailed(items)
+			return
+		}
 	}
 
 	for i, item := range items {
@@ -103,6 +127,36 @@ func (w *Worker) embedPending() {
 		}
 		if err := w.storeEmbedding(item, vecs[i]); err != nil {
 			log.Printf("embed worker: store embedding for %s %d: %v", item.sourceType, item.sourceID, err)
+		}
+	}
+}
+
+func (w *Worker) isOllamaAvailable() bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, w.client.baseURL+"/api/tags", nil)
+	if err != nil {
+		return false
+	}
+	resp, err := w.client.httpClient.Do(req)
+	if err != nil {
+		return false
+	}
+	defer func() { _ = resp.Body.Close() }()
+	return resp.StatusCode == http.StatusOK
+}
+
+func (w *Worker) markFailed(items []unembeddedItem) {
+	if w.db == nil || len(items) == 0 {
+		return
+	}
+	for _, item := range items {
+		_, err := w.db.Exec(
+			"UPDATE embedding_meta SET status = 'failed' WHERE source_type = ? AND source_id = ?",
+			item.sourceType, item.sourceID,
+		)
+		if err != nil {
+			log.Printf("embed worker: mark failed %s %d: %v", item.sourceType, item.sourceID, err)
 		}
 	}
 }
@@ -123,6 +177,15 @@ func (w *Worker) getUnembeddedItems(limit int) ([]unembeddedItem, error) {
 		FROM preferences p
 		LEFT JOIN embedding_meta em ON em.source_type = 'preference' AND em.source_id = p.id
 		WHERE em.id IS NULL AND p.content IS NOT NULL AND p.content != '' AND p.superseded_by IS NULL
+		UNION ALL
+		SELECT em.source_type, em.source_id,
+			CASE em.source_type
+				WHEN 'session' THEN (SELECT summary FROM sessions WHERE id = em.source_id)
+				WHEN 'note' THEN (SELECT content FROM notes WHERE id = em.source_id)
+				WHEN 'preference' THEN (SELECT content FROM preferences WHERE id = em.source_id)
+			END
+		FROM embedding_meta em
+		WHERE em.status = 'pending'
 		LIMIT ?
 	`
 
@@ -166,7 +229,7 @@ func (w *Worker) storeEmbedding(item unembeddedItem, vec []float64) error {
 	}
 
 	_, err = tx.Exec(
-		"INSERT INTO embedding_meta (id, source_type, source_id, content_hash, content_truncated, embedded_at, embedding_model) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		"INSERT INTO embedding_meta (id, source_type, source_id, content_hash, content_truncated, embedded_at, embedding_model, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'done')",
 		embID, item.sourceType, item.sourceID, contentHash, truncated, time.Now().UTC(), w.client.Model(),
 	)
 	if err != nil {
