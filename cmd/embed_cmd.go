@@ -18,7 +18,7 @@ var embedCmd = &cobra.Command{
 		reembed, _ := cmd.Flags().GetBool("reembed")
 
 		if !backfill && !reembed {
-			cmd.Usage()
+			_ = cmd.Usage()
 			return nil
 		}
 

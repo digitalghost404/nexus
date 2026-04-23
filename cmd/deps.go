@@ -25,7 +25,7 @@ var depsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		var projects []db.Project
 		if depsProject != "" {

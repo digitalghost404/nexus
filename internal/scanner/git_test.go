@@ -59,8 +59,8 @@ func TestGetLastCommit(t *testing.T) {
 
 func TestDetectLanguages(t *testing.T) {
 	repo := CreateTestRepo(t, filepath.Join(t.TempDir(), "test-repo"))
-	os.WriteFile(filepath.Join(repo, "main.go"), []byte("package main"), 0644)
-	os.WriteFile(filepath.Join(repo, "app.ts"), []byte("console.log()"), 0644)
+	_ = os.WriteFile(filepath.Join(repo, "main.go"), []byte("package main"), 0644)
+	_ = os.WriteFile(filepath.Join(repo, "app.ts"), []byte("console.log()"), 0644)
 
 	langs := DetectLanguages(repo)
 	found := map[string]bool{}
@@ -103,8 +103,8 @@ func TestGetDirtyFileDetails(t *testing.T) {
 	repo := CreateTestRepo(t, filepath.Join(t.TempDir(), "test-repo"))
 
 	// Create modified and untracked files
-	os.WriteFile(filepath.Join(repo, "README.md"), []byte("modified"), 0644)
-	os.WriteFile(filepath.Join(repo, "new.txt"), []byte("new"), 0644)
+	_ = os.WriteFile(filepath.Join(repo, "README.md"), []byte("modified"), 0644)
+	_ = os.WriteFile(filepath.Join(repo, "new.txt"), []byte("new"), 0644)
 
 	details, err := GetDirtyFileDetails(repo)
 	if err != nil {

@@ -64,7 +64,7 @@ func (d *DB) SearchSimilar(queryVec []float64, sourceType string, limit int, min
 	if err != nil {
 		return nil, fmt.Errorf("query embeddings: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	type candidate struct {
 		embID      int64

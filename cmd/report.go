@@ -54,18 +54,18 @@ var reportCmd = &cobra.Command{
 			pa.Sessions++
 
 			var commits []struct{ Hash, Message string }
-			json.Unmarshal([]byte(s.CommitsMade), &commits)
+			_ = json.Unmarshal([]byte(s.CommitsMade), &commits)
 			pa.Commits += len(commits)
 			totalCommits += len(commits)
 
 			var files []string
-			json.Unmarshal([]byte(s.FilesChanged), &files)
+			_ = json.Unmarshal([]byte(s.FilesChanged), &files)
 			for _, f := range files {
 				fileSet[f] = true
 			}
 
 			var tags []string
-			json.Unmarshal([]byte(s.Tags), &tags)
+			_ = json.Unmarshal([]byte(s.Tags), &tags)
 			for _, t := range tags {
 				if t != s.ProjectName { // skip project name tag
 					langCount[t]++

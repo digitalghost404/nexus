@@ -13,7 +13,7 @@ func TestFindLatestSession(t *testing.T) {
 	// Create mock Claude session dir
 	claudeDir := t.TempDir()
 	sessionsDir := filepath.Join(claudeDir, "sessions")
-	os.MkdirAll(sessionsDir, 0755)
+	_ = os.MkdirAll(sessionsDir, 0755)
 
 	// Create a session file
 	session := map[string]interface{}{
@@ -23,7 +23,7 @@ func TestFindLatestSession(t *testing.T) {
 		"startedAt": time.Now().Add(-time.Hour).Format(time.RFC3339),
 	}
 	data, _ := json.Marshal(session)
-	os.WriteFile(filepath.Join(sessionsDir, "abc-123-def"), data, 0644)
+	_ = os.WriteFile(filepath.Join(sessionsDir, "abc-123-def"), data, 0644)
 
 	result, err := FindLatestSession(claudeDir, "/home/user/projects/wraith")
 	if err != nil {
@@ -40,7 +40,7 @@ func TestFindLatestSession(t *testing.T) {
 func TestFindLatestSessionNoMatch(t *testing.T) {
 	claudeDir := t.TempDir()
 	sessionsDir := filepath.Join(claudeDir, "sessions")
-	os.MkdirAll(sessionsDir, 0755)
+	_ = os.MkdirAll(sessionsDir, 0755)
 
 	session := map[string]interface{}{
 		"sessionId": "abc-123",
@@ -48,7 +48,7 @@ func TestFindLatestSessionNoMatch(t *testing.T) {
 		"startedAt": time.Now().Format(time.RFC3339),
 	}
 	data, _ := json.Marshal(session)
-	os.WriteFile(filepath.Join(sessionsDir, "abc-123"), data, 0644)
+	_ = os.WriteFile(filepath.Join(sessionsDir, "abc-123"), data, 0644)
 
 	result, err := FindLatestSession(claudeDir, "/home/user/projects/wraith")
 	if err != nil {

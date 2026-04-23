@@ -38,7 +38,7 @@ func (d *DB) GetLinkedProjects(projectID int64) ([]Project, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get linked: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var projects []Project
 	for rows.Next() {

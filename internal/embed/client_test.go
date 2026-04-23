@@ -11,7 +11,7 @@ import (
 func TestEmbedSingleText(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"model":"nomic-embed-text","embeddings":[[0.1,0.2,0.3]]}`))
+		_, _ = w.Write([]byte(`{"model":"nomic-embed-text","embeddings":[[0.1,0.2,0.3]]}`))
 	}))
 	defer server.Close()
 
@@ -28,7 +28,7 @@ func TestEmbedSingleText(t *testing.T) {
 func TestEmbedBatch(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"model":"nomic-embed-text","embeddings":[[0.1,0.2,0.3],[0.4,0.5,0.6]]}`))
+		_, _ = w.Write([]byte(`{"model":"nomic-embed-text","embeddings":[[0.1,0.2,0.3],[0.4,0.5,0.6]]}`))
 	}))
 	defer server.Close()
 
@@ -78,14 +78,14 @@ func TestEmbedRequestFormation(t *testing.T) {
 		gotMethod = r.Method
 		gotPath = r.URL.Path
 		gotContentType = r.Header.Get("Content-Type")
-		json.NewDecoder(r.Body).Decode(&gotBody)
+		_ = json.NewDecoder(r.Body).Decode(&gotBody)
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"model":"nomic-embed-text","embeddings":[[0.1]]}`))
+		_, _ = w.Write([]byte(`{"model":"nomic-embed-text","embeddings":[[0.1]]}`))
 	}))
 	defer server.Close()
 
 	client := NewClient(server.URL, "nomic-embed-text", server.Client())
-	client.Embed(context.Background(), "hello")
+	_, _ = client.Embed(context.Background(), "hello")
 
 	if gotMethod != http.MethodPost {
 		t.Errorf("expected POST, got %s", gotMethod)

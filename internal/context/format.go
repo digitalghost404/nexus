@@ -77,7 +77,7 @@ func FormatPreferences(prefs []db.Preference) string {
 		if p.Source != "stated" {
 			sourceTag = fmt.Sprintf(" (%s, %.0f%%)", p.Source, p.Confidence*100)
 		}
-		b.WriteString(fmt.Sprintf("- [%s] %s%s\n", p.Category, p.Content, sourceTag))
+		fmt.Fprintf(&b, "- [%s] %s%s\n", p.Category, p.Content, sourceTag)
 	}
 
 	return b.String()
@@ -89,8 +89,8 @@ func formatProjectHeader(project *db.Project) string {
 	}
 
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("## Project: %s\n", project.Name))
-	b.WriteString(fmt.Sprintf("**Branch**: %s | **Status**: %s", project.Branch, project.Status))
+	fmt.Fprintf(&b, "## Project: %s\n", project.Name)
+	fmt.Fprintf(&b, "**Branch**: %s | **Status**: %s", project.Branch, project.Status)
 
 	if !project.LastCommitAt.Valid {
 		b.WriteString(" | **Last commit**: none\n")

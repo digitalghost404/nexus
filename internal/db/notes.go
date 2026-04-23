@@ -41,7 +41,7 @@ func (d *DB) ListNotes(projectID int64, limit int) ([]Note, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list notes: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var notes []Note
 	for rows.Next() {

@@ -154,7 +154,7 @@ func (w *Worker) storeEmbedding(item unembeddedItem, vec []float64) error {
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	result, err := tx.Exec("INSERT INTO embeddings (embedding) VALUES (?)", vecBlob)
 	if err != nil {

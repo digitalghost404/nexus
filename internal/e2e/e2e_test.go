@@ -429,7 +429,7 @@ func TestE2E_HTTPServerRecallEndpoint(t *testing.T) {
 			results = results[:body.Limit]
 		}
 
-		json.NewEncoder(w).Encode(map[string]interface{}{"results": results})
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"results": results})
 	})
 
 	server := httptest.NewServer(mux)
@@ -551,7 +551,7 @@ func TestE2E_HTTPServerInjectEndpoint(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "text/plain")
-		fmt.Fprint(w, ctxOutput)
+		_, _ = fmt.Fprint(w, ctxOutput)
 	})
 
 	server := httptest.NewServer(mux)
@@ -574,7 +574,7 @@ func TestE2E_HTTPServerInjectEndpoint(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	buf.ReadFrom(resp.Body)
+	_, _ = buf.ReadFrom(resp.Body)
 	output := buf.String()
 
 	if output == "" {
@@ -626,7 +626,7 @@ func TestE2E_HTTPServerEmbedStatusEndpoint(t *testing.T) {
 			return
 		}
 
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"queue_depth":   queueDepth,
 			"model":         "nomic-embed-text",
 			"ollama_url":    "http://localhost:11434",
@@ -773,13 +773,13 @@ func TestE2E_AgentIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open claude db: %v", err)
 	}
-	defer claudeDB.Close()
+	defer func() { _ = claudeDB.Close() }()
 
 	opencodeDB, err := db.Open(opencodePath)
 	if err != nil {
 		t.Fatalf("open opencode db: %v", err)
 	}
-	defer opencodeDB.Close()
+	defer func() { _ = opencodeDB.Close() }()
 
 	// Insert different data in each
 	proj1 := db.Project{

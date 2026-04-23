@@ -72,11 +72,11 @@ func FormatSmartSummary(w io.Writer, dirty []db.Project, sessions []db.Session, 
 
 	// Dirty projects
 	if len(dirty) > 0 {
-		fmt.Fprintf(w, "│  ⚠ %d project(s) with uncommitted changes\n", len(dirty))
+		_, _ = fmt.Fprintf(w, "│  ⚠ %d project(s) with uncommitted changes\n", len(dirty))
 		for _, p := range dirty {
-			fmt.Fprintf(w, "│  %-14s %s  %d dirty file(s)\n", p.Name, p.Branch, p.DirtyFiles)
+			_, _ = fmt.Fprintf(w, "│  %-14s %s  %d dirty file(s)\n", p.Name, p.Branch, p.DirtyFiles)
 		}
-		fmt.Fprintf(w, "│\n")
+		_, _ = fmt.Fprintf(w, "│\n")
 	}
 
 	// Recent sessions
@@ -91,9 +91,9 @@ func FormatSmartSummary(w io.Writer, dirty []db.Project, sessions []db.Session, 
 			if len(summary) > 50 {
 				summary = summary[:47] + "..."
 			}
-			fmt.Fprintf(w, "│  %-14s %-12s \"%s\"\n", s.ProjectName, timeStr, summary)
-		}
-		fmt.Fprintf(w, "│\n")
+		fmt.Fprintf(w, "│  %-14s %-12s \"%s\"\n", s.ProjectName, timeStr, summary)
+	}
+	_, _ = fmt.Fprintf(w, "│\n")
 	}
 
 	// Stale projects
@@ -158,7 +158,7 @@ func FormatSessionList(w io.Writer, sessions []db.Session) {
 		fmt.Fprintf(w, "%-16s %-14s %-10s %s\n",
 			truncate(s.ProjectName, 15), timeStr, s.Source, summary)
 	}
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w)
 }
 
 func FormatProjectDetail(w io.Writer, p *db.Project, sessions []db.Session, staleBranches []string, linkedProjects []db.Project) {
@@ -231,7 +231,7 @@ func FormatSearchResults(w io.Writer, sessions []db.Session, notes []db.Note) {
 			fmt.Fprintf(w, "  %-14s %s\n", RelativeTime(n.CreatedAt), truncate(n.Content, 60))
 		}
 	}
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w)
 }
 
 func RelativeTime(t time.Time) string {

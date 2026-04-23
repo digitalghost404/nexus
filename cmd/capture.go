@@ -31,7 +31,7 @@ var captureCmd = &cobra.Command{
 			client := &http.Client{Timeout: 2 * time.Second}
 			resp, err := client.Post(probeURL, "application/json", bytes.NewReader(body))
 			if err == nil {
-				defer resp.Body.Close()
+				defer func() { _ = resp.Body.Close() }()
 				if resp.StatusCode == http.StatusOK {
 					if debug {
 						fmt.Printf("Captured session via serve API (online mode)\n")
@@ -50,7 +50,7 @@ var captureCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("open db: %w", err)
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		result, err := capture.CaptureSession(database, captureDir, "")
 		if err != nil {

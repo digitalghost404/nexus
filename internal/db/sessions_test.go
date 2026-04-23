@@ -66,9 +66,9 @@ func TestSearchSessions(t *testing.T) {
 	now := time.Now()
 	pID, _ := d.UpsertProject(Project{Name: "proj", Path: "/a", Status: "active", DiscoveredAt: NullTime{Time: now, Valid: true}})
 
-	d.InsertSession(Session{ProjectID: pID, Summary: "Added retry logic to DNS scanner", Source: "wrapper", StartedAt: &now})
-	d.InsertSession(Session{ProjectID: pID, Summary: "Fixed database migration bug", Source: "wrapper", StartedAt: &now})
-	d.InsertSession(Session{ProjectID: pID, Summary: "Refactored HTTP client with retry", Source: "wrapper", StartedAt: &now})
+	_, _ = d.InsertSession(Session{ProjectID: pID, Summary: "Added retry logic to DNS scanner", Source: "wrapper", StartedAt: &now})
+	_, _ = d.InsertSession(Session{ProjectID: pID, Summary: "Fixed database migration bug", Source: "wrapper", StartedAt: &now})
+	_, _ = d.InsertSession(Session{ProjectID: pID, Summary: "Refactored HTTP client with retry", Source: "wrapper", StartedAt: &now})
 
 	results, err := d.SearchSessions("retry")
 	if err != nil {

@@ -28,7 +28,7 @@ var contextCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		p, err := database.GetProjectByName(args[0])
 		if err != nil {

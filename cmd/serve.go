@@ -83,7 +83,7 @@ var serveCmd = &cobra.Command{
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]interface{}{"notes": out})
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"notes": out})
 			return
 		}
 
@@ -504,7 +504,7 @@ var serveCmd = &cobra.Command{
 			}
 
 			w.Header().Set("Content-Type", "text/plain")
-			fmt.Fprint(w, ctxOutput)
+			_, _ = fmt.Fprint(w, ctxOutput)
 		})
 
 		// GET /api/embed/status — embedding queue status

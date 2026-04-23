@@ -49,7 +49,7 @@ var noteCmd = &cobra.Command{
 		client := &http.Client{Timeout: 2 * time.Second}
 		resp, err := client.Post(probeURL, "application/json", bytes.NewReader(reqBody))
 		if err == nil {
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 			if resp.StatusCode == http.StatusOK {
 				if debug {
 					fmt.Printf("Note added via serve API (online mode)\n")

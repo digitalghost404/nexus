@@ -43,7 +43,7 @@ func TestListSessionsByTag(t *testing.T) {
 	s1, _ := d.InsertSession(Session{ProjectID: pID, Summary: "tagged", Source: "wrapper", StartedAt: &now})
 	d.InsertSession(Session{ProjectID: pID, Summary: "not tagged", Source: "wrapper", StartedAt: &now})
 
-	d.AddSessionTag(s1, "special")
+	_ = d.AddSessionTag(s1, "special")
 
 	sessions, _ := d.ListSessionsByTag("special")
 	if len(sessions) != 1 || sessions[0].Summary != "tagged" {
