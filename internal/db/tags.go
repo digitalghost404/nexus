@@ -23,7 +23,7 @@ func (d *DB) ListSessionTags(sessionID int64) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var tags []string
 	for rows.Next() {
@@ -53,7 +53,7 @@ func (d *DB) ListSessionsByTag(tag string) ([]Session, error) {
 	if err != nil {
 		return nil, fmt.Errorf("sessions by tag: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var sessions []Session
 	for rows.Next() {

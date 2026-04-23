@@ -42,7 +42,7 @@ var rootCmd = &cobra.Command{
 			if err != nil {
 				return fmt.Errorf("open db: %w", err)
 			}
-			defer database.Close()
+			defer func() { _ = database.Close() }()
 			p, err := database.GetProjectByName(args[0])
 			if err != nil {
 				return err
@@ -62,7 +62,7 @@ func smartSummary() error {
 		fmt.Println("Nexus not initialized. Run 'nexus init' to get started.")
 		return nil
 	}
-	defer database.Close()
+	defer func() { _ = database.Close() }()
 
 	dirty, _ := database.ListDirtyProjects()
 	sessions, _ := database.ListSessions(db.SessionFilter{Limit: 5})

@@ -143,8 +143,8 @@ func FormatSessionList(w io.Writer, sessions []db.Session) {
 		return
 	}
 
-	fmt.Fprintf(w, "\n%-16s %-14s %-10s %s\n", "PROJECT", "WHEN", "SOURCE", "SUMMARY")
-	fmt.Fprintf(w, "%s\n", strings.Repeat("─", 76))
+	_, _ = fmt.Fprintf(w, "\n%-16s %-14s %-10s %s\n", "PROJECT", "WHEN", "SOURCE", "SUMMARY")
+	_, _ = fmt.Fprintf(w, "%s\n", strings.Repeat("─", 76))
 
 	for _, s := range sessions {
 		timeStr := ""
@@ -155,7 +155,7 @@ func FormatSessionList(w io.Writer, sessions []db.Session) {
 		if len(summary) > 36 {
 			summary = summary[:33] + "..."
 		}
-		fmt.Fprintf(w, "%-16s %-14s %-10s %s\n",
+		_, _ = fmt.Fprintf(w, "%-16s %-14s %-10s %s\n",
 			truncate(s.ProjectName, 15), timeStr, s.Source, summary)
 	}
 	_, _ = fmt.Fprintln(w)

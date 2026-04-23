@@ -23,7 +23,7 @@ var resumeCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		defer database.Close()
+		defer func() { _ = database.Close() }()
 
 		// Resolve project
 		var project *db.Project

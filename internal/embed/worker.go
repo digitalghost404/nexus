@@ -130,7 +130,7 @@ func (w *Worker) getUnembeddedItems(limit int) ([]unembeddedItem, error) {
 	if err != nil {
 		return nil, fmt.Errorf("query unembedded: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []unembeddedItem
 	for rows.Next() {
